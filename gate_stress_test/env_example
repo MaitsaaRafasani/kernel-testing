@@ -1,0 +1,32 @@
+# port tcp ip for general gate
+TCP_HOST=
+TCP_PORT=
+
+# database connection
+DB_NAME=
+DB_USER=
+DB_HOST=
+DB_PASS=
+DB_PORT=
+
+# number of worker to run
+WORKER=
+# number of client for each worker
+CLIENT_COUNTER=
+# delay between each client
+CLIENT_DELAY=
+# live duration for each client
+LIVE_DURATION=
+
+# Model use for running data (concox/teltonika) 
+DEVICE_MODEL=
+
+# imei 6 first digits
+IMEI_PREFIX=
+
+# Send location data after device login
+SEND_DATA=
+DATA_DELAY=
+
+# True if imei need to register to database
+REGISTER_DEVICE=

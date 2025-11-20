@@ -1,5 +1,6 @@
-import dotenv from "dotenv";
-dotenv.config();
+import * as dotenv from "dotenv"
+dotenv.config()
+
 import cluster, { Worker } from "node:cluster"
 import { createConnection } from "node:net"
 import { masterToWorker, workerToMaster } from "./type"
@@ -28,7 +29,6 @@ const target = 1
 const companyID = 1
 
 const device = devices[process.env.DEVICE_MODEL || "concox"]
-
 
 class RegisterWorker {
     constructor() {
@@ -190,6 +190,10 @@ class WorkerHandler {
     }
 
     async runClient(imei: string) {
+        if (!device) {
+            throw new Error(`Device model '${process.env.DEVICE_MODEL || "concox"}' not found`);
+        }
+
         const client = createConnection({ host, port })
         let sendAllowed = false
         let sending = false
