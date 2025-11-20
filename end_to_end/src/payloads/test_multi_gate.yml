@@ -1,0 +1,215 @@
+type: tcp
+message_type: hex
+device_type: concox
+nsq_check: true
+
+test_case:
+  - name: Concox X3 Registered device 2 connection
+    connections:
+      - steps:
+        - name: Login 1
+          block: true
+          pre_test:
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}"]
+          send: "787811010${imei}200812c90410f40e0d0a"
+          expect_ack:
+            - "7878050110014c4d0d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "787811010${imei}200812c90410f40e0d0a", "x3", "concox"]
+
+        - name: Heartbeat 1
+          block: true
+          send: "78780a130604050002000d8f530d0a"
+          expect_ack: ['7878051310017c600d0a']
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}", true, "${date_now}"]
+          nsq_check:
+            - $template: nsq_connection_info_connect
+              args: ["${imei}"]
+            - $template: nsq_data
+              args: ["${imei}", "78780a130604050002000d8f530d0a", "x3", "concox"]
+
+        - name: Location 1
+          send: "7878222217080b150603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a"
+          expect_ack: []
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "7878222217080b150603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+              expected_failed: true   # because this runs parallel with Login 2, the gateway may handle either message first
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+              expected_failed: true   # because this runs parallel with Login 2, the gateway may handle either message first
+
+      - steps:
+        - delay: 2
+        - name: Login 2
+          pre_test: 
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}"]
+          send: "787811010${imei}200812c90410f40e0d0a"
+          expect_ack:
+            - "7878050110014c4d0d0a"
+          nsq_check:
+            - expected_failed: true
+            - $template: nsq_data
+              args: ["${imei}", "787811010${imei}200812c90410f40e0d0a", "x3", "concox"]
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+              expected_failed: true   # because this runs parallel with Login 2, the gateway may handle either message first
+            - $template: nsq_data
+              args: ["${imei}", "7878222217080b150603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+              expected_failed: true   # because this runs parallel with Login 2, the gateway may handle either message first
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}", false, "${date_now}"]
+
+        - name: Location 2-1
+          send: "7878222217080b150603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a"
+          expect_ack: []
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "7878222217080b150603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+            - $template: nsq_connection_info_connect
+              args: ["${imei}"]
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}", true, "${date_now}"]
+
+        - name: Location 2-2
+          send: "7878222216080b160603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a"
+          expect_ack: []
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "7878222216080b160603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}", false, "${date_now}"]
+
+  - name: Same device diff gate
+    connections:
+      - steps:
+        - pod_ip: '${pod_ip_0}'
+          port: '${port_0}'
+        - name: Login device gate 0
+          pre_test:
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}"]
+          send: "787811010${imei}200812c90410f40e0d0a"
+          expect_ack:
+            - "7878050110014c4d0d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "787811010${imei}200812c90410f40e0d0a", "x3", "concox"]
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+
+      - steps:
+        - delay: 2
+          pod_ip: '${pod_ip_1}'
+          port: '${port_1}'
+        - name: Login device gate 1
+          pre_test:
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}"]
+          send: "787811010${imei}200812c90410f40e0d0a"
+          expect_ack:
+            - "7878050110014c4d0d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "787811010${imei}200812c90410f40e0d0a", "x3", "concox"]
+
+        - name: Location
+          send: "7878222219080b140603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a"
+          expect_ack: []
+          nsq_check:
+            - $template: nsq_connection_info_connect
+              args: ["${imei}"]
+            - $template: nsq_data
+              args: ["${imei}", "7878222219080b140603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+
+        - name: Heartbeat
+          send: "78780a130604040002000d8f530d0a"
+          expect_ack:
+            - "7878051310017c600d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "78780a130604040002000d8f530d0a", "x3", "concox"]
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+
+  - name: Online command diff gate
+    connections:
+      - steps:
+        - pod_ip: ${pod_ip_0}
+          port: '${port_0}'
+        - name: Login gate 0
+          block: true
+          pre_test: 
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}"]
+            - $template: reset_command_queue
+              args: ["${imei}"]
+          send: "787811010${imei}200812c90410f40e0d0a"
+          expect_ack:
+            - "7878050110014c4d0d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "787811010${imei}200812c90410f40e0d0a", "x3", "concox"]
+
+        - name: Location
+          block: true
+          send: "7878222219080b140603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a"
+          expect_ack: []
+          nsq_check:
+            - $template: nsq_connection_info_connect
+              args: ["${imei}"]
+            - $template: nsq_data
+              args: ["${imei}", "7878222219080b140603c800c7a5d10c18c86000d11501fe0a3e990096f4010001002208be0d0a", "x3", "concox"]
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_nsq_debug}", True, "${date_now}"]
+
+        - name: Heartbeat
+          send: "78780a130604040002000d8f530d0a"
+          expect_ack:
+            - "7878051310017c600d0a"
+            - "787811800b00000000535441545553231011e78b0d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "78780a130604040002000d8f530d0a", "x3", "concox"]
+            - $template: nsq_data
+              args: ["${imei}", "79790029210022000000737563636573732120636f6d6d616e642073656e74202d20535441545553231011019e0d0a", "x3", "concox"]
+
+        - name: Alarm Vibration
+          send: "7878252612030c063816c3026c10540c38c9700144030901cc002866000eee0c06040302000da2db0d0a"
+          expect_ack:
+            - "787805261001c3730d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "7878252612030c063816c3026c10540c38c9700144030901cc002866000eee0c06040302000da2db0d0a", "x3", "concox"]
+
+        - name: Alarm Vibration
+          send: "7878252612030c063816c3026c10540c38c9700144030901cc002866000eee0c06040302000da2db0d0a"
+          expect_ack:
+            - "787805261001c3730d0a"
+          nsq_check:
+            - $template: nsq_data
+              args: ["${imei}", "7878252612030c063816c3026c10540c38c9700144030901cc002866000eee0c06040302000da2db0d0a", "x3", "concox"]
+            - $template: nsq_connection_info_disconnect
+              args: ["${imei}"]
+
+      - steps:
+        - delay: 1
+          pod_ip: ${pod_ip_1}
+          port: ${port_1}
+        - name: Send online command gate 1
+          send: "80800${imei}0753544154555323"
+          expect_ack: []
+          db_check:
+            - $template: db_check_command_queue
+              args: ["${imei}"]

@@ -1,0 +1,126 @@
+type: tcp
+message_type: string
+test_case:
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register
+          pre_test: 
+            - $template: delete_device
+              args: ["${imei}"]
+          send: "7000,GC,${imei},REGISTER"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", None, None, "${target}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register - registered gps
+          pre_test: 
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", 0]
+          send: "7000,GC,${imei},REGISTER"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register - registered trackvision
+          pre_test:
+            - $template: insert_device
+              args: ["${imei_trackvision}", "bsj", "eh03t", 0]
+          send: "7000,GC,${imei_trackvision},REGISTER"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei_trackvision}", "bsj", "eh03t", "${target_trackvision}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register Indo - registered
+          send: "7000,GC,${imei},REGISTER,INDONESIA"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", "concox", "x3", "${target_indo}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register Indo - unregistered
+          pre_test: 
+            - $template: delete_device
+              args: ["${imei}"]
+          send: "7000,GC,${imei},REGISTER,INDONESIA"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", None, None, "${target_indo}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register Indo - registered trackvision
+          pre_test:
+            - $template: insert_device
+              args: ["${imei_trackvision}", "bsj", "eh03t", 0]
+          send: "7000,GC,${imei_trackvision},REGISTER,INDONESIA"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei_trackvision}", "bsj", "eh03t", "${target_trackvision_indo}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register with space
+          pre_test: 
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", 0]
+          send: "7000,GC,${imei},REGISTER, IN DO NE SI A"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", None, None, "${target_indo}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Register typo
+          send: "7000,GC,${imei},REGISTER,IDR"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei}", None, None, "${target}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Target
+          pre_test: 
+            - $template: insert_device
+              args: ["${imei}", "concox", "x3", 0]
+          send: "7000,GC,${imei_trackvision},TARGET,${target_trackvision}"
+          expect_ack: "01"
+          db_check:
+            - $template: db_check_device
+              args: ["${imei_trackvision}", "bsj", "eh03t", "${target_trackvision}", False, None]
+
+  - name: Gateway Command
+    connections:
+      - steps:
+        - name: Duplicate
+          send: "7000,GC,${imei_trackvision},DUPLICATE,1"
+          expect_ack: "01"
+          db_check:
+            - query: "SELECT imei AS imei, number_of_duplicates AS duplicate FROM devices d WHERE d.imei = %s"
+              params: ["${imei_trackvision}"]
+              assertions:
+                imei: "${imei_trackvision}"
+                duplicate: 1
