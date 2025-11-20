@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./services/db";
 
 export function sleep(ms: number) {
     return new Promise(resolve =>  setTimeout(resolve, ms))
