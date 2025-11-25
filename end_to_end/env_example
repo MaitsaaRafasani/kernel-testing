@@ -1,0 +1,22 @@
+# port tcp ip for general gate
+TCP_HOST=
+TCP_PORT=
+
+# port tcp ip direct to multigate 
+TCP_HOST_0=
+TCP_PORT_0=
+TCP_HOST_1=
+TCP_PORT_1=
+
+# database connection
+DB_NAME=
+DB_USER=
+DB_HOST=
+DB_PASS=
+DB_PORT=
+
+# imei gps device
+IMEI=
+IMEI_1=
+# imei trackvision device
+IMEI_TV=
