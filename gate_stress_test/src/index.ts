@@ -13,7 +13,7 @@ const port = Number(process.env.TCP_PORT) || 1200
 
 const workerCount = Number(process.env.WORKER) || 1
 const clientPerWorker = Number(process.env.CLIENT_COUNTER) || 3
-const generateDelay = (Number(process.env.CLIENT_DELAY) || 1) * 1000
+const generateDelay = (Number(process.env.CLIENT_DELAY) || 1) * 100
 
 const sendData = process.env.SEND_DATA === "true"
 const dataDelay = (Number(process.env.DATA_DELAY) || 10) * 1000
