@@ -7,7 +7,7 @@ export const devices: Record<string, BaseDevice> = {
             return Buffer.from("787811010" + imei +"200812c90410f40e0d0a", "hex")
         },
         loginReplyPacket(data: string) {
-            return (/^78780501[0-9A-Fa-f]{4}d9dc0d0a$/.test(data))
+            return (/^78780501[0-9A-Fa-f]{4}[0-9A-Fa-f]{4}0d0a$/.test(data))
         },
         locationPacket() {
             return Buffer.from('7878222219080a102021c700c7a6200c18caa000d03301fe0a3e990096f40100010022f95d0d0a', 'hex')
