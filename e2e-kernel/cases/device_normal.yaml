@@ -1,0 +1,1154 @@
+# Test case device_normal: timeline (sheet notes/db_requirements/settings/setup/timeline).
+# Dibuat oleh generators/device_normal.py: ubah generatornya lalu python cli.py generate --usecase device_normal
+# (bukan edit YAML / Excel, generate ulang menimpa file ini)
+
+usecase: device_normal
+description: |
+  Dibuat oleh generators/device_normal.py (python cli.py generate --usecase device_normal): ubah generator, bukan Excel.
+  Device normal kernel v2, satu timeline untuk semua family di creators, rute jalan asli (routes/*.json, OSRM).
+  1. Trip normal 00:01:00 - 01:02:20: Jakarta (Jl. Thamrin) -> Karawang Barat, 64.4 km, acc on,
+     60 km/jam, overspeed 120 km/jam 00:30:00 - 00:33:00.
+  2. Trip assisted 01:23:10 - 02:52:30: Karawang Barat -> Purwakarta, 45.1 km,
+     diderek (acc off), 30 km/jam.
+  3. Trip buffer 03:18:40 - 04:31:00: Purwakarta -> Bekasi, 72.4 km,
+     60 km/jam. 5 menit realtime, offline 1 jam (120 record tiap 30 detik, dikirim saat
+     login lagi 04:24:00), lalu realtime sampai tujuan.
+  Tiap trip ditutup parkir acc off 20 - 25 menit (paket tiap 5 menit) sampai summary_trip tertulis.
+  Syarat DB: lihat db_requirements.
+  Catatan kernel v2 (usecase/location/motion_status/motion_status.py):
+  - trip M: acc on, jarak >= 20 m dan speed >= 5 -> motion, tripstart_on = waktu paket itu.
+    Selesai: diam >= park_timeout -> parkir, stop_time = paket gerak terakhir.
+  - trip A (assisted): acc off, jarak >= 300 m dari titik parkir -> assisted (step assisted_start).
+    Lanjut tiap paket >= 50 m. Selesai: diam >= park_timeout + 5 menit.
+  - overspeed lokasi (usecase/sensor/overspeed): speed > alert_hi lebih dari 60 detik -> raw_alert code 8,
+    created_on = awal overspeed + 60 detik. Waktu paket > 30 menit lalu: tetap insert, tanpa notifikasi.
+  - trip_mileage = jarak haversine antar paket gerak (paket gerak pertama tidak dihitung).
+  - buffer: teltonika 1 paket AVL 120 record, ruptela 1 paket, concox / topflytech frame disambung
+    1 pesan, queclink 1 frame +BSP per pesan. Jeda paket lokasi < 15 menit (NO_GPS_TIMEOUT).
+  - heartbeat hanya concox (paket 0x13). command reply tanpa queclink (+RESP berisi waktu kirim device).
+  - queclink tidak punya paket login: step login tidak mengirim apa pun.
+db_requirements:
+- 'IMEI tiap family (env.yaml devices) terdaftar di device, vehicle, vehicle_status dengan model yang sama: concox 358000000000001, teltonika 350000000000001, topflytech 351000000000001, ruptela 352000000000001, queclink 353000000000001.'
+- vehicle_status tiap vehicle sudah di-reset (sentinel 2024-04-03 07:00:00 +0700) sebelum run.
+- Sensor speed terdaftar dengan alert_hi < 120 km/jam (alert overspeed).
+- 'Company vehicle test: park_timeout <= 10 menit (trip ditutup saat parkir 20 menit).'
+- 'Company dan vehicle khusus test: tidak ada notifikasi / forwarder ke customer asli.'
+families: [concox, teltonika, topflytech, ruptela, queclink]
+start: now-05:10:00
+interval: 00:00:10
+timeline:
+- {from: '00:00:00', step_name: login, packet: login}
+- {from: '00:00:05', step_name: connected, packet: connect, ip_gate: 10.10.10.10, port_gate: random}
+- {from: '00:00:10', to: '00:01:00', first_step_name: location, packet: location, lat: -6.193096, lng: 106.822934, speed: 0, direction: 359, acc: true}
+- {from: '00:01:00', step_name: trip_start, packet: location, lat: -6.191598, lng: 106.822909, speed: 60, direction: 359}
+- {from: '00:01:00', to: '01:02:20', every: '00:10:00', first_step_name: heartbeat, packet: heartbeat, families: [concox], battery: 5, signal_strength: 4}
+- {from: '00:01:10', packet: location, lat: -6.1901, lng: 106.822861, speed: 60, direction: 0}
+- {from: '00:01:20', packet: location, lat: -6.188602, lng: 106.822878, speed: 60, direction: 2}
+- {from: '00:01:30', packet: location, lat: -6.187105, lng: 106.822938, speed: 60, direction: 3}
+- {from: '00:01:40', packet: location, lat: -6.186992, lng: 106.821498, speed: 60, direction: 269}
+- {from: '00:01:50', packet: location, lat: -6.187081, lng: 106.819994, speed: 60, direction: 266}
+- {from: '00:02:00', packet: location, lat: -6.187051, lng: 106.81969, speed: 60, direction: 86}
+- {from: '00:02:10', packet: location, lat: -6.186935, lng: 106.821193, speed: 60, direction: 88}
+- {from: '00:02:20', packet: location, lat: -6.186947, lng: 106.822699, speed: 60, direction: 93}
+- {from: '00:02:30', packet: location, lat: -6.187963, lng: 106.823164, speed: 60, direction: 183}
+- {from: '00:02:30', step_name: command_reply, packet: command_reply, families: [concox, teltonika, topflytech, ruptela], reply_text: 'STATUS OK GPRS:Link Up GSM Signal Level:Strong ACC:ON'}
+- {from: '00:02:40', packet: location, lat: -6.189461, lng: 106.823107, speed: 60, direction: 182}
+- {from: '00:02:50', packet: location, lat: -6.190958, lng: 106.823078, speed: 60, direction: 180}
+- {from: '00:03:00', packet: location, lat: -6.192456, lng: 106.823114, speed: 60, direction: 178}
+- {from: '00:03:10', packet: location, lat: -6.193954, lng: 106.823165, speed: 60, direction: 178}
+- {from: '00:03:20', packet: location, lat: -6.19532, lng: 106.82344, speed: 60, direction: 220}
+- {from: '00:03:30', packet: location, lat: -6.196729, lng: 106.823214, speed: 60, direction: 179}
+- {from: '00:03:40', packet: location, lat: -6.198227, lng: 106.823247, speed: 60, direction: 178}
+- {from: '00:03:50', packet: location, lat: -6.199725, lng: 106.823287, speed: 60, direction: 180}
+- {from: '00:04:00', packet: location, lat: -6.201218, lng: 106.823198, speed: 60, direction: 192}
+- {from: '00:04:10', packet: location, lat: -6.20268, lng: 106.822871, speed: 60, direction: 192}
+- {from: '00:04:20', packet: location, lat: -6.204147, lng: 106.822565, speed: 60, direction: 191}
+- {from: '00:04:30', packet: location, lat: -6.205632, lng: 106.822368, speed: 60, direction: 185}
+- {from: '00:04:40', packet: location, lat: -6.207123, lng: 106.822218, speed: 60, direction: 187}
+- {from: '00:04:50', packet: location, lat: -6.208599, lng: 106.821964, speed: 60, direction: 196}
+- {from: '00:05:00', packet: location, lat: -6.209996, lng: 106.821427, speed: 60, direction: 206}
+- {from: '00:05:10', packet: location, lat: -6.211332, lng: 106.820744, speed: 60, direction: 206}
+- {from: '00:05:20', packet: location, lat: -6.212664, lng: 106.820055, speed: 60, direction: 210}
+- {from: '00:05:30', packet: location, lat: -6.213898, lng: 106.819205, speed: 60, direction: 219}
+- {from: '00:05:40', packet: location, lat: -6.215026, lng: 106.818234, speed: 60, direction: 239}
+- {from: '00:05:50', packet: location, lat: -6.215905, lng: 106.817019, speed: 60, direction: 232}
+- {from: '00:06:00', packet: location, lat: -6.216837, lng: 106.815838, speed: 60, direction: 232}
+- {from: '00:06:10', packet: location, lat: -6.217819, lng: 106.814722, speed: 60, direction: 234}
+- {from: '00:06:20', packet: location, lat: -6.219119, lng: 106.814058, speed: 60, direction: 197}
+- {from: '00:06:30', packet: location, lat: -6.220563, lng: 106.813672, speed: 60, direction: 184}
+- {from: '00:06:40', packet: location, lat: -6.221875, lng: 106.814328, speed: 60, direction: 145}
+- {from: '00:06:50', packet: location, lat: -6.223066, lng: 106.815237, speed: 60, direction: 137}
+- {from: '00:07:00', packet: location, lat: -6.224312, lng: 106.816072, speed: 60, direction: 150}
+- {from: '00:07:10', packet: location, lat: -6.225574, lng: 106.816884, speed: 60, direction: 145}
+- {from: '00:07:20', packet: location, lat: -6.226816, lng: 106.817727, speed: 60, direction: 148}
+- {from: '00:07:30', packet: location, lat: -6.228049, lng: 106.818582, speed: 60, direction: 147}
+- {from: '00:07:40', packet: location, lat: -6.229327, lng: 106.81935, speed: 60, direction: 148}
+- {from: '00:07:50', packet: location, lat: -6.230574, lng: 106.820184, speed: 60, direction: 148}
+- {from: '00:08:00', packet: location, lat: -6.231844, lng: 106.820965, speed: 60, direction: 144}
+- {from: '00:08:10', packet: location, lat: -6.233008, lng: 106.82191, speed: 60, direction: 135}
+- {from: '00:08:20', packet: location, lat: -6.23396, lng: 106.823072, speed: 60, direction: 126}
+- {from: '00:08:30', packet: location, lat: -6.234798, lng: 106.824321, speed: 60, direction: 124}
+- {from: '00:08:40', packet: location, lat: -6.235632, lng: 106.825573, speed: 60, direction: 124}
+- {from: '00:08:50', packet: location, lat: -6.236446, lng: 106.826839, speed: 60, direction: 122}
+- {from: '00:09:00', packet: location, lat: -6.237251, lng: 106.82811, speed: 60, direction: 122}
+- {from: '00:09:10', packet: location, lat: -6.238056, lng: 106.829382, speed: 60, direction: 122}
+- {from: '00:09:20', packet: location, lat: -6.238863, lng: 106.830652, speed: 60, direction: 123}
+- {from: '00:09:30', packet: location, lat: -6.23967, lng: 106.831921, speed: 60, direction: 123}
+- {from: '00:09:40', packet: location, lat: -6.240396, lng: 106.833237, speed: 60, direction: 111}
+- {from: '00:09:50', packet: location, lat: -6.240841, lng: 106.834675, speed: 60, direction: 105}
+- {from: '00:10:00', packet: location, lat: -6.241189, lng: 106.836141, speed: 60, direction: 103}
+- {from: '00:10:10', packet: location, lat: -6.241519, lng: 106.837611, speed: 60, direction: 104}
+- {from: '00:10:20', packet: location, lat: -6.24188, lng: 106.839074, speed: 60, direction: 104}
+- {from: '00:10:30', packet: location, lat: -6.242221, lng: 106.840542, speed: 60, direction: 104}
+- {from: '00:10:40', packet: location, lat: -6.242759, lng: 106.841944, speed: 60, direction: 117}
+- {from: '00:10:50', packet: location, lat: -6.243246, lng: 106.84336, speed: 60, direction: 96}
+- {from: '00:11:00', packet: location, lat: -6.243342, lng: 106.844864, speed: 60, direction: 92}
+- {from: '00:11:10', packet: location, lat: -6.243395, lng: 106.846371, speed: 60, direction: 91}
+- {from: '00:11:20', packet: location, lat: -6.243321, lng: 106.847875, speed: 60, direction: 87}
+- {from: '00:11:30', packet: location, lat: -6.243241, lng: 106.84938, speed: 60, direction: 87}
+- {from: '00:11:40', packet: location, lat: -6.243164, lng: 106.850885, speed: 60, direction: 87}
+- {from: '00:11:50', packet: location, lat: -6.243128, lng: 106.852392, speed: 60, direction: 90}
+- {from: '00:12:00', packet: location, lat: -6.243133, lng: 106.8539, speed: 60, direction: 90}
+- {from: '00:12:10', packet: location, lat: -6.243125, lng: 106.855407, speed: 60, direction: 90}
+- {from: '00:12:20', packet: location, lat: -6.243115, lng: 106.856915, speed: 60, direction: 90}
+- {from: '00:12:30', packet: location, lat: -6.243106, lng: 106.858422, speed: 60, direction: 90}
+- {from: '00:12:40', packet: location, lat: -6.243089, lng: 106.859929, speed: 60, direction: 89}
+- {from: '00:12:50', packet: location, lat: -6.243067, lng: 106.861436, speed: 60, direction: 89}
+- {from: '00:13:00', packet: location, lat: -6.243053, lng: 106.862944, speed: 60, direction: 90}
+- {from: '00:13:10', packet: location, lat: -6.24315, lng: 106.864446, speed: 60, direction: 100}
+- {from: '00:13:20', packet: location, lat: -6.243507, lng: 106.865909, speed: 60, direction: 108}
+- {from: '00:13:30', packet: location, lat: -6.244002, lng: 106.867331, speed: 60, direction: 111}
+- {from: '00:13:40', packet: location, lat: -6.244534, lng: 106.86874, speed: 60, direction: 111}
+- {from: '00:13:50', packet: location, lat: -6.245044, lng: 106.870157, speed: 60, direction: 110}
+- {from: '00:14:00', packet: location, lat: -6.245502, lng: 106.871592, speed: 60, direction: 105}
+- {from: '00:14:10', packet: location, lat: -6.245872, lng: 106.873053, speed: 60, direction: 104}
+- {from: '00:14:20', packet: location, lat: -6.246211, lng: 106.874521, speed: 60, direction: 103}
+- {from: '00:14:30', packet: location, lat: -6.246525, lng: 106.875995, speed: 60, direction: 102}
+- {from: '00:14:40', packet: location, lat: -6.24684, lng: 106.877469, speed: 60, direction: 102}
+- {from: '00:14:50', packet: location, lat: -6.247169, lng: 106.878939, speed: 60, direction: 103}
+- {from: '00:15:00', packet: location, lat: -6.247461, lng: 106.880417, speed: 60, direction: 99}
+- {from: '00:15:10', packet: location, lat: -6.247484, lng: 106.881921, speed: 60, direction: 88}
+- {from: '00:15:20', packet: location, lat: -6.247422, lng: 106.883428, speed: 60, direction: 87}
+- {from: '00:15:30', packet: location, lat: -6.247229, lng: 106.88492, speed: 60, direction: 77}
+- {from: '00:15:40', packet: location, lat: -6.246666, lng: 106.886311, speed: 60, direction: 61}
+- {from: '00:15:50', packet: location, lat: -6.245845, lng: 106.887571, speed: 60, direction: 54}
+- {from: '00:16:00', packet: location, lat: -6.244967, lng: 106.888792, speed: 60, direction: 54}
+- {from: '00:16:10', packet: location, lat: -6.244182, lng: 106.890074, speed: 60, direction: 63}
+- {from: '00:16:20', packet: location, lat: -6.243814, lng: 106.891534, speed: 60, direction: 85}
+- {from: '00:16:30', packet: location, lat: -6.243747, lng: 106.893037, speed: 60, direction: 95}
+- {from: '00:16:40', packet: location, lat: -6.244038, lng: 106.894512, speed: 60, direction: 110}
+- {from: '00:16:50', packet: location, lat: -6.244635, lng: 106.895891, speed: 60, direction: 122}
+- {from: '00:17:00', packet: location, lat: -6.245491, lng: 106.897126, speed: 60, direction: 128}
+- {from: '00:17:10', packet: location, lat: -6.24653, lng: 106.898209, speed: 60, direction: 137}
+- {from: '00:17:20', packet: location, lat: -6.247725, lng: 106.899116, speed: 60, direction: 146}
+- {from: '00:17:30', packet: location, lat: -6.248995, lng: 106.899913, speed: 60, direction: 149}
+- {from: '00:17:40', packet: location, lat: -6.250285, lng: 106.900681, speed: 60, direction: 150}
+- {from: '00:17:50', packet: location, lat: -6.251538, lng: 106.901506, speed: 60, direction: 146}
+- {from: '00:18:00', packet: location, lat: -6.252709, lng: 106.902444, speed: 60, direction: 132}
+- {from: '00:18:10', packet: location, lat: -6.253683, lng: 106.903588, speed: 60, direction: 127}
+- {from: '00:18:20', packet: location, lat: -6.254512, lng: 106.90484, speed: 60, direction: 117}
+- {from: '00:18:30', packet: location, lat: -6.255158, lng: 106.906198, speed: 60, direction: 111}
+- {from: '00:18:40', packet: location, lat: -6.2557, lng: 106.907604, speed: 60, direction: 111}
+- {from: '00:18:50', packet: location, lat: -6.256243, lng: 106.909008, speed: 60, direction: 111}
+- {from: '00:19:00', packet: location, lat: -6.256788, lng: 106.910413, speed: 60, direction: 111}
+- {from: '00:19:10', packet: location, lat: -6.257332, lng: 106.911817, speed: 60, direction: 111}
+- {from: '00:19:20', packet: location, lat: -6.257814, lng: 106.913243, speed: 60, direction: 108}
+- {from: '00:19:30', packet: location, lat: -6.258147, lng: 106.914711, speed: 60, direction: 101}
+- {from: '00:19:40', packet: location, lat: -6.258316, lng: 106.916209, speed: 60, direction: 95}
+- {from: '00:19:50', packet: location, lat: -6.258357, lng: 106.917715, speed: 60, direction: 90}
+- {from: '00:20:00', packet: location, lat: -6.258327, lng: 106.919222, speed: 60, direction: 87}
+- {from: '00:20:10', packet: location, lat: -6.25825, lng: 106.920727, speed: 60, direction: 87}
+- {from: '00:20:20', packet: location, lat: -6.258173, lng: 106.922233, speed: 60, direction: 87}
+- {from: '00:20:30', packet: location, lat: -6.258107, lng: 106.923739, speed: 60, direction: 88}
+- {from: '00:20:40', packet: location, lat: -6.258029, lng: 106.925244, speed: 60, direction: 87}
+- {from: '00:20:50', packet: location, lat: -6.257948, lng: 106.926749, speed: 60, direction: 87}
+- {from: '00:21:00', packet: location, lat: -6.257869, lng: 106.928255, speed: 60, direction: 87}
+- {from: '00:21:10', packet: location, lat: -6.257793, lng: 106.92976, speed: 60, direction: 87}
+- {from: '00:21:20', packet: location, lat: -6.257724, lng: 106.931266, speed: 60, direction: 87}
+- {from: '00:21:30', packet: location, lat: -6.257651, lng: 106.932772, speed: 60, direction: 87}
+- {from: '00:21:40', packet: location, lat: -6.257577, lng: 106.934277, speed: 60, direction: 87}
+- {from: '00:21:50', packet: location, lat: -6.257504, lng: 106.935783, speed: 60, direction: 87}
+- {from: '00:22:00', packet: location, lat: -6.257434, lng: 106.937288, speed: 60, direction: 87}
+- {from: '00:22:10', packet: location, lat: -6.257362, lng: 106.938794, speed: 60, direction: 87}
+- {from: '00:22:20', packet: location, lat: -6.257293, lng: 106.9403, speed: 60, direction: 87}
+- {from: '00:22:30', packet: location, lat: -6.257215, lng: 106.941805, speed: 60, direction: 87}
+- {from: '00:22:40', packet: location, lat: -6.257134, lng: 106.94331, speed: 60, direction: 87}
+- {from: '00:22:50', packet: location, lat: -6.257054, lng: 106.944816, speed: 60, direction: 87}
+- {from: '00:23:00', packet: location, lat: -6.256974, lng: 106.946321, speed: 60, direction: 87}
+- {from: '00:23:10', packet: location, lat: -6.256898, lng: 106.947827, speed: 60, direction: 87}
+- {from: '00:23:20', packet: location, lat: -6.256826, lng: 106.949332, speed: 60, direction: 87}
+- {from: '00:23:30', packet: location, lat: -6.256754, lng: 106.950838, speed: 60, direction: 87}
+- {from: '00:23:40', packet: location, lat: -6.25666, lng: 106.952342, speed: 60, direction: 86}
+- {from: '00:23:50', packet: location, lat: -6.256584, lng: 106.953848, speed: 60, direction: 87}
+- {from: '00:24:00', packet: location, lat: -6.256516, lng: 106.955354, speed: 60, direction: 87}
+- {from: '00:24:10', packet: location, lat: -6.256418, lng: 106.956858, speed: 60, direction: 86}
+- {from: '00:24:20', packet: location, lat: -6.256285, lng: 106.958357, speed: 60, direction: 83}
+- {from: '00:24:30', packet: location, lat: -6.255993, lng: 106.959835, speed: 60, direction: 78}
+- {from: '00:24:40', packet: location, lat: -6.255624, lng: 106.961295, speed: 60, direction: 77}
+- {from: '00:24:50', packet: location, lat: -6.255178, lng: 106.962733, speed: 60, direction: 70}
+- {from: '00:25:00', packet: location, lat: -6.254633, lng: 106.964136, speed: 60, direction: 65}
+- {from: '00:25:10', packet: location, lat: -6.253905, lng: 106.965453, speed: 60, direction: 60}
+- {from: '00:25:20', packet: location, lat: -6.25315, lng: 106.966755, speed: 60, direction: 60}
+- {from: '00:25:30', packet: location, lat: -6.252349, lng: 106.968029, speed: 60, direction: 57}
+- {from: '00:25:40', packet: location, lat: -6.251541, lng: 106.969299, speed: 60, direction: 57}
+- {from: '00:25:50', packet: location, lat: -6.250741, lng: 106.970573, speed: 60, direction: 59}
+- {from: '00:26:00', packet: location, lat: -6.25001, lng: 106.971889, speed: 60, direction: 63}
+- {from: '00:26:10', packet: location, lat: -6.249424, lng: 106.973275, speed: 60, direction: 68}
+- {from: '00:26:20', packet: location, lat: -6.248985, lng: 106.974715, speed: 60, direction: 76}
+- {from: '00:26:30', packet: location, lat: -6.248721, lng: 106.976198, speed: 60, direction: 82}
+- {from: '00:26:40', packet: location, lat: -6.248629, lng: 106.977701, speed: 60, direction: 89}
+- {from: '00:26:50', packet: location, lat: -6.248685, lng: 106.979207, speed: 60, direction: 95}
+- {from: '00:27:00', packet: location, lat: -6.248912, lng: 106.980696, speed: 60, direction: 102}
+- {from: '00:27:10', packet: location, lat: -6.249311, lng: 106.982148, speed: 60, direction: 109}
+- {from: '00:27:20', packet: location, lat: -6.249824, lng: 106.983564, speed: 60, direction: 112}
+- {from: '00:27:30', packet: location, lat: -6.250462, lng: 106.984927, speed: 60, direction: 117}
+- {from: '00:27:40', packet: location, lat: -6.251152, lng: 106.986265, speed: 60, direction: 117}
+- {from: '00:27:50', packet: location, lat: -6.251843, lng: 106.987603, speed: 60, direction: 117}
+- {from: '00:28:00', packet: location, lat: -6.252503, lng: 106.988955, speed: 60, direction: 113}
+- {from: '00:28:10', packet: location, lat: -6.253057, lng: 106.990355, speed: 60, direction: 112}
+- {from: '00:28:20', packet: location, lat: -6.25361, lng: 106.991756, speed: 60, direction: 112}
+- {from: '00:28:30', packet: location, lat: -6.254162, lng: 106.993158, speed: 60, direction: 112}
+- {from: '00:28:40', packet: location, lat: -6.254678, lng: 106.994573, speed: 60, direction: 109}
+- {from: '00:28:50', packet: location, lat: -6.255165, lng: 106.995998, speed: 60, direction: 109}
+- {from: '00:29:00', packet: location, lat: -6.255662, lng: 106.99742, speed: 60, direction: 110}
+- {from: '00:29:10', packet: location, lat: -6.256168, lng: 106.998839, speed: 60, direction: 110}
+- {from: '00:29:20', packet: location, lat: -6.256668, lng: 107.00026, speed: 60, direction: 109}
+- {from: '00:29:30', packet: location, lat: -6.257164, lng: 107.001683, speed: 60, direction: 109}
+- {from: '00:29:40', packet: location, lat: -6.25766, lng: 107.003105, speed: 60, direction: 109}
+- {from: '00:29:50', packet: location, lat: -6.258157, lng: 107.004527, speed: 60, direction: 109}
+- {from: '00:30:00', step_name: overspeed_start, packet: location, lat: -6.259149, lng: 107.007372, speed: 120, direction: 109}
+- {from: '00:30:10', packet: location, lat: -6.260145, lng: 107.010216, speed: 120, direction: 109}
+- {from: '00:30:20', packet: location, lat: -6.261143, lng: 107.013059, speed: 120, direction: 109}
+- {from: '00:30:30', packet: location, lat: -6.262125, lng: 107.015907, speed: 120, direction: 109}
+- {from: '00:30:40', packet: location, lat: -6.263117, lng: 107.018752, speed: 120, direction: 110}
+- {from: '00:30:50', packet: location, lat: -6.264119, lng: 107.021593, speed: 120, direction: 110}
+- {from: '00:31:00', packet: location, lat: -6.265121, lng: 107.024434, speed: 120, direction: 110}
+- {from: '00:31:10', packet: location, lat: -6.266123, lng: 107.027276, speed: 120, direction: 110}
+- {from: '00:31:20', packet: location, lat: -6.267125, lng: 107.030118, speed: 120, direction: 109}
+- {from: '00:31:30', packet: location, lat: -6.268122, lng: 107.032961, speed: 120, direction: 109}
+- {from: '00:31:40', packet: location, lat: -6.269122, lng: 107.035803, speed: 120, direction: 109}
+- {from: '00:31:50', packet: location, lat: -6.270122, lng: 107.038645, speed: 120, direction: 110}
+- {from: '00:32:00', packet: location, lat: -6.271174, lng: 107.041468, speed: 120, direction: 112}
+- {from: '00:32:10', packet: location, lat: -6.272328, lng: 107.04425, speed: 120, direction: 114}
+- {from: '00:32:20', packet: location, lat: -6.273556, lng: 107.047, speed: 120, direction: 114}
+- {from: '00:32:30', packet: location, lat: -6.274759, lng: 107.049762, speed: 120, direction: 114}
+- {from: '00:32:40', packet: location, lat: -6.275982, lng: 107.052514, speed: 120, direction: 112}
+- {from: '00:32:50', step_name: overspeed_end, packet: location, lat: -6.277033, lng: 107.055337, speed: 120, direction: 110}
+- {from: '00:33:00', packet: location, lat: -6.277549, lng: 107.056752, speed: 60, direction: 110}
+- {from: '00:33:10', packet: location, lat: -6.278031, lng: 107.058179, speed: 60, direction: 107}
+- {from: '00:33:20', packet: location, lat: -6.278469, lng: 107.05962, speed: 60, direction: 107}
+- {from: '00:33:30', packet: location, lat: -6.278909, lng: 107.061061, speed: 60, direction: 108}
+- {from: '00:33:40', packet: location, lat: -6.279364, lng: 107.062498, speed: 60, direction: 108}
+- {from: '00:33:50', packet: location, lat: -6.279821, lng: 107.063933, speed: 60, direction: 108}
+- {from: '00:34:00', packet: location, lat: -6.28028, lng: 107.065368, speed: 60, direction: 108}
+- {from: '00:34:10', packet: location, lat: -6.280729, lng: 107.066807, speed: 60, direction: 107}
+- {from: '00:34:20', packet: location, lat: -6.281161, lng: 107.06825, speed: 60, direction: 107}
+- {from: '00:34:30', packet: location, lat: -6.281594, lng: 107.069693, speed: 60, direction: 107}
+- {from: '00:34:40', packet: location, lat: -6.282026, lng: 107.071137, speed: 60, direction: 107}
+- {from: '00:34:50', packet: location, lat: -6.282459, lng: 107.07258, speed: 60, direction: 107}
+- {from: '00:35:00', packet: location, lat: -6.282902, lng: 107.07402, speed: 60, direction: 108}
+- {from: '00:35:10', packet: location, lat: -6.283352, lng: 107.075458, speed: 60, direction: 107}
+- {from: '00:35:20', packet: location, lat: -6.283794, lng: 107.076898, speed: 60, direction: 107}
+- {from: '00:35:30', packet: location, lat: -6.284214, lng: 107.078345, speed: 60, direction: 106}
+- {from: '00:35:40', packet: location, lat: -6.284659, lng: 107.079785, speed: 60, direction: 107}
+- {from: '00:35:50', packet: location, lat: -6.285104, lng: 107.081224, speed: 60, direction: 107}
+- {from: '00:36:00', packet: location, lat: -6.285549, lng: 107.082664, speed: 60, direction: 107}
+- {from: '00:36:10', packet: location, lat: -6.285995, lng: 107.084103, speed: 60, direction: 107}
+- {from: '00:36:20', packet: location, lat: -6.286443, lng: 107.085542, speed: 60, direction: 108}
+- {from: '00:36:30', packet: location, lat: -6.286896, lng: 107.086979, speed: 60, direction: 108}
+- {from: '00:36:40', packet: location, lat: -6.287354, lng: 107.088414, speed: 60, direction: 109}
+- {from: '00:36:50', packet: location, lat: -6.28784, lng: 107.08984, speed: 60, direction: 109}
+- {from: '00:37:00', packet: location, lat: -6.288339, lng: 107.091261, speed: 60, direction: 111}
+- {from: '00:37:10', packet: location, lat: -6.288876, lng: 107.092668, speed: 60, direction: 111}
+- {from: '00:37:20', packet: location, lat: -6.289413, lng: 107.094076, speed: 60, direction: 111}
+- {from: '00:37:30', packet: location, lat: -6.289974, lng: 107.095474, speed: 60, direction: 114}
+- {from: '00:37:40', packet: location, lat: -6.290584, lng: 107.09685, speed: 60, direction: 115}
+- {from: '00:37:50', packet: location, lat: -6.291206, lng: 107.098222, speed: 60, direction: 115}
+- {from: '00:38:00', packet: location, lat: -6.291829, lng: 107.099593, speed: 60, direction: 115}
+- {from: '00:38:10', packet: location, lat: -6.29247, lng: 107.100955, speed: 60, direction: 117}
+- {from: '00:38:20', packet: location, lat: -6.293159, lng: 107.102294, speed: 60, direction: 118}
+- {from: '00:38:30', packet: location, lat: -6.293861, lng: 107.103626, speed: 60, direction: 119}
+- {from: '00:38:40', packet: location, lat: -6.294585, lng: 107.104946, speed: 60, direction: 119}
+- {from: '00:38:50', packet: location, lat: -6.295322, lng: 107.106259, speed: 60, direction: 120}
+- {from: '00:39:00', packet: location, lat: -6.296073, lng: 107.107563, speed: 60, direction: 120}
+- {from: '00:39:10', packet: location, lat: -6.296826, lng: 107.108866, speed: 60, direction: 120}
+- {from: '00:39:20', packet: location, lat: -6.29758, lng: 107.110169, speed: 60, direction: 120}
+- {from: '00:39:30', packet: location, lat: -6.298334, lng: 107.111472, speed: 60, direction: 120}
+- {from: '00:39:40', packet: location, lat: -6.299091, lng: 107.112773, speed: 60, direction: 121}
+- {from: '00:39:50', packet: location, lat: -6.29986, lng: 107.114067, speed: 60, direction: 120}
+- {from: '00:40:00', packet: location, lat: -6.300618, lng: 107.115367, speed: 60, direction: 120}
+- {from: '00:40:10', packet: location, lat: -6.301366, lng: 107.116673, speed: 60, direction: 120}
+- {from: '00:40:20', packet: location, lat: -6.302126, lng: 107.117973, speed: 60, direction: 120}
+- {from: '00:40:30', packet: location, lat: -6.302885, lng: 107.119272, speed: 60, direction: 120}
+- {from: '00:40:40', packet: location, lat: -6.303645, lng: 107.120572, speed: 60, direction: 120}
+- {from: '00:40:50', packet: location, lat: -6.304405, lng: 107.121871, speed: 60, direction: 120}
+- {from: '00:41:00', packet: location, lat: -6.305164, lng: 107.123171, speed: 60, direction: 120}
+- {from: '00:41:10', packet: location, lat: -6.305922, lng: 107.124472, speed: 60, direction: 120}
+- {from: '00:41:20', packet: location, lat: -6.306677, lng: 107.125774, speed: 60, direction: 120}
+- {from: '00:41:30', packet: location, lat: -6.307432, lng: 107.127076, speed: 60, direction: 120}
+- {from: '00:41:40', packet: location, lat: -6.308187, lng: 107.128378, speed: 60, direction: 120}
+- {from: '00:41:50', packet: location, lat: -6.308942, lng: 107.12968, speed: 60, direction: 120}
+- {from: '00:42:00', packet: location, lat: -6.309697, lng: 107.130983, speed: 60, direction: 120}
+- {from: '00:42:10', packet: location, lat: -6.310452, lng: 107.132285, speed: 60, direction: 120}
+- {from: '00:42:20', packet: location, lat: -6.311207, lng: 107.133587, speed: 60, direction: 120}
+- {from: '00:42:30', packet: location, lat: -6.311962, lng: 107.134889, speed: 60, direction: 120}
+- {from: '00:42:40', packet: location, lat: -6.312717, lng: 107.136191, speed: 60, direction: 120}
+- {from: '00:42:50', packet: location, lat: -6.313472, lng: 107.137494, speed: 60, direction: 120}
+- {from: '00:43:00', packet: location, lat: -6.314194, lng: 107.138811, speed: 60, direction: 120}
+- {from: '00:43:10', packet: location, lat: -6.314953, lng: 107.140111, speed: 60, direction: 120}
+- {from: '00:43:20', packet: location, lat: -6.315713, lng: 107.141411, speed: 60, direction: 120}
+- {from: '00:43:30', packet: location, lat: -6.316472, lng: 107.14271, speed: 60, direction: 120}
+- {from: '00:43:40', packet: location, lat: -6.317232, lng: 107.14401, speed: 60, direction: 120}
+- {from: '00:43:50', packet: location, lat: -6.317991, lng: 107.145309, speed: 60, direction: 120}
+- {from: '00:44:00', packet: location, lat: -6.318751, lng: 107.146609, speed: 60, direction: 120}
+- {from: '00:44:10', packet: location, lat: -6.319504, lng: 107.147912, speed: 60, direction: 120}
+- {from: '00:44:20', packet: location, lat: -6.320252, lng: 107.149219, speed: 60, direction: 120}
+- {from: '00:44:30', packet: location, lat: -6.320995, lng: 107.150528, speed: 60, direction: 120}
+- {from: '00:44:40', packet: location, lat: -6.321745, lng: 107.151833, speed: 60, direction: 120}
+- {from: '00:44:50', packet: location, lat: -6.322493, lng: 107.153139, speed: 60, direction: 120}
+- {from: '00:45:00', packet: location, lat: -6.323251, lng: 107.15444, speed: 60, direction: 121}
+- {from: '00:45:10', packet: location, lat: -6.324023, lng: 107.155732, speed: 60, direction: 121}
+- {from: '00:45:20', packet: location, lat: -6.32477, lng: 107.157038, speed: 60, direction: 119}
+- {from: '00:45:30', packet: location, lat: -6.325486, lng: 107.158363, speed: 60, direction: 119}
+- {from: '00:45:40', packet: location, lat: -6.326201, lng: 107.159688, speed: 60, direction: 119}
+- {from: '00:45:50', packet: location, lat: -6.326892, lng: 107.161025, speed: 60, direction: 116}
+- {from: '00:46:00', packet: location, lat: -6.327547, lng: 107.162381, speed: 60, direction: 116}
+- {from: '00:46:10', packet: location, lat: -6.32819, lng: 107.163743, speed: 60, direction: 114}
+- {from: '00:46:20', packet: location, lat: -6.328796, lng: 107.165122, speed: 60, direction: 114}
+- {from: '00:46:30', packet: location, lat: -6.329387, lng: 107.166507, speed: 60, direction: 113}
+- {from: '00:46:40', packet: location, lat: -6.329948, lng: 107.167905, speed: 60, direction: 111}
+- {from: '00:46:50', packet: location, lat: -6.330483, lng: 107.169313, speed: 60, direction: 111}
+- {from: '00:47:00', packet: location, lat: -6.331009, lng: 107.170725, speed: 60, direction: 110}
+- {from: '00:47:10', packet: location, lat: -6.331519, lng: 107.172142, speed: 60, direction: 110}
+- {from: '00:47:20', packet: location, lat: -6.332029, lng: 107.17356, speed: 60, direction: 110}
+- {from: '00:47:30', packet: location, lat: -6.332537, lng: 107.174978, speed: 60, direction: 110}
+- {from: '00:47:40', packet: location, lat: -6.333041, lng: 107.176398, speed: 60, direction: 110}
+- {from: '00:47:50', packet: location, lat: -6.333546, lng: 107.177818, speed: 60, direction: 110}
+- {from: '00:48:00', packet: location, lat: -6.33405, lng: 107.179237, speed: 60, direction: 110}
+- {from: '00:48:10', packet: location, lat: -6.334555, lng: 107.180657, speed: 60, direction: 110}
+- {from: '00:48:20', packet: location, lat: -6.335059, lng: 107.182076, speed: 60, direction: 110}
+- {from: '00:48:30', packet: location, lat: -6.335566, lng: 107.183495, speed: 60, direction: 110}
+- {from: '00:48:40', packet: location, lat: -6.336075, lng: 107.184913, speed: 60, direction: 110}
+- {from: '00:48:50', packet: location, lat: -6.336587, lng: 107.18633, speed: 60, direction: 109}
+- {from: '00:49:00', packet: location, lat: -6.337097, lng: 107.187747, speed: 60, direction: 111}
+- {from: '00:49:10', packet: location, lat: -6.33769, lng: 107.189132, speed: 60, direction: 115}
+- {from: '00:49:20', packet: location, lat: -6.338365, lng: 107.190478, speed: 60, direction: 118}
+- {from: '00:49:30', packet: location, lat: -6.339101, lng: 107.19179, speed: 60, direction: 123}
+- {from: '00:49:40', packet: location, lat: -6.339922, lng: 107.193051, speed: 60, direction: 125}
+- {from: '00:49:50', packet: location, lat: -6.340812, lng: 107.194263, speed: 60, direction: 127}
+- {from: '00:50:00', packet: location, lat: -6.341734, lng: 107.195451, speed: 60, direction: 130}
+- {from: '00:50:10', packet: location, lat: -6.342722, lng: 107.196584, speed: 60, direction: 133}
+- {from: '00:50:20', packet: location, lat: -6.343745, lng: 107.197686, speed: 60, direction: 133}
+- {from: '00:50:30', packet: location, lat: -6.34473, lng: 107.198821, speed: 60, direction: 128}
+- {from: '00:50:40', packet: location, lat: -6.34564, lng: 107.200019, speed: 60, direction: 126}
+- {from: '00:50:50', packet: location, lat: -6.346514, lng: 107.201243, speed: 60, direction: 124}
+- {from: '00:51:00', packet: location, lat: -6.347325, lng: 107.202511, speed: 60, direction: 121}
+- {from: '00:51:10', packet: location, lat: -6.34804, lng: 107.203835, speed: 60, direction: 117}
+- {from: '00:51:20', packet: location, lat: -6.348692, lng: 107.205192, speed: 60, direction: 114}
+- {from: '00:51:30', packet: location, lat: -6.34927, lng: 107.206583, speed: 60, direction: 112}
+- {from: '00:51:40', packet: location, lat: -6.349772, lng: 107.208003, speed: 60, direction: 107}
+- {from: '00:51:50', packet: location, lat: -6.350218, lng: 107.209442, speed: 60, direction: 106}
+- {from: '00:52:00', packet: location, lat: -6.350548, lng: 107.210913, speed: 60, direction: 102}
+- {from: '00:52:10', packet: location, lat: -6.350857, lng: 107.212388, speed: 60, direction: 102}
+- {from: '00:52:20', packet: location, lat: -6.351165, lng: 107.213863, speed: 60, direction: 102}
+- {from: '00:52:30', packet: location, lat: -6.351465, lng: 107.215341, speed: 60, direction: 102}
+- {from: '00:52:40', packet: location, lat: -6.351766, lng: 107.216818, speed: 60, direction: 102}
+- {from: '00:52:50', packet: location, lat: -6.352067, lng: 107.218294, speed: 60, direction: 102}
+- {from: '00:53:00', packet: location, lat: -6.352369, lng: 107.219771, speed: 60, direction: 102}
+- {from: '00:53:10', packet: location, lat: -6.352678, lng: 107.221247, speed: 60, direction: 102}
+- {from: '00:53:20', packet: location, lat: -6.352989, lng: 107.222722, speed: 60, direction: 102}
+- {from: '00:53:30', packet: location, lat: -6.353299, lng: 107.224197, speed: 60, direction: 102}
+- {from: '00:53:40', packet: location, lat: -6.353608, lng: 107.225672, speed: 60, direction: 102}
+- {from: '00:53:50', packet: location, lat: -6.353918, lng: 107.227147, speed: 60, direction: 102}
+- {from: '00:54:00', packet: location, lat: -6.354228, lng: 107.228622, speed: 60, direction: 102}
+- {from: '00:54:10', packet: location, lat: -6.354538, lng: 107.230097, speed: 60, direction: 102}
+- {from: '00:54:20', packet: location, lat: -6.354795, lng: 107.231582, speed: 60, direction: 100}
+- {from: '00:54:30', packet: location, lat: -6.354922, lng: 107.233084, speed: 60, direction: 94}
+- {from: '00:54:40', packet: location, lat: -6.35499, lng: 107.23459, speed: 60, direction: 92}
+- {from: '00:54:50', packet: location, lat: -6.355007, lng: 107.236098, speed: 60, direction: 89}
+- {from: '00:55:00', packet: location, lat: -6.354937, lng: 107.237604, speed: 60, direction: 84}
+- {from: '00:55:10', packet: location, lat: -6.354755, lng: 107.2391, speed: 60, direction: 82}
+- {from: '00:55:20', packet: location, lat: -6.354498, lng: 107.240585, speed: 60, direction: 78}
+- {from: '00:55:30', packet: location, lat: -6.354172, lng: 107.242057, speed: 60, direction: 76}
+- {from: '00:55:40', packet: location, lat: -6.353768, lng: 107.243508, speed: 60, direction: 73}
+- {from: '00:55:50', packet: location, lat: -6.353254, lng: 107.244924, speed: 60, direction: 69}
+- {from: '00:56:00', packet: location, lat: -6.352681, lng: 107.246317, speed: 60, direction: 66}
+- {from: '00:56:10', packet: location, lat: -6.352064, lng: 107.247691, speed: 60, direction: 66}
+- {from: '00:56:20', packet: location, lat: -6.351448, lng: 107.249065, speed: 60, direction: 66}
+- {from: '00:56:30', packet: location, lat: -6.350845, lng: 107.250445, speed: 60, direction: 67}
+- {from: '00:56:40', packet: location, lat: -6.350273, lng: 107.251839, speed: 60, direction: 70}
+- {from: '00:56:50', packet: location, lat: -6.349794, lng: 107.253267, speed: 60, direction: 74}
+- {from: '00:57:00', packet: location, lat: -6.349375, lng: 107.254715, speed: 60, direction: 77}
+- {from: '00:57:10', packet: location, lat: -6.349046, lng: 107.256185, speed: 60, direction: 77}
+- {from: '00:57:20', packet: location, lat: -6.348788, lng: 107.25767, speed: 60, direction: 81}
+- {from: '00:57:30', packet: location, lat: -6.348615, lng: 107.259167, speed: 60, direction: 85}
+- {from: '00:57:40', packet: location, lat: -6.348512, lng: 107.260671, speed: 60, direction: 86}
+- {from: '00:57:50', packet: location, lat: -6.348489, lng: 107.262178, speed: 60, direction: 91}
+- {from: '00:58:00', packet: location, lat: -6.348539, lng: 107.263684, speed: 60, direction: 92}
+- {from: '00:58:10', packet: location, lat: -6.34856, lng: 107.265189, speed: 60, direction: 91}
+- {from: '00:58:20', packet: location, lat: -6.348535, lng: 107.266694, speed: 60, direction: 86}
+- {from: '00:58:30', packet: location, lat: -6.348188, lng: 107.26814, speed: 60, direction: 56}
+- {from: '00:58:40', packet: location, lat: -6.346974, lng: 107.268959, speed: 60, direction: 21}
+- {from: '00:58:50', packet: location, lat: -6.345577, lng: 107.269506, speed: 60, direction: 23}
+- {from: '00:59:00', packet: location, lat: -6.344196, lng: 107.270087, speed: 60, direction: 29}
+- {from: '00:59:10', packet: location, lat: -6.342826, lng: 107.270674, speed: 60, direction: 19}
+- {from: '00:59:20', packet: location, lat: -6.341421, lng: 107.271197, speed: 60, direction: 21}
+- {from: '00:59:30', packet: location, lat: -6.340024, lng: 107.271742, speed: 60, direction: 24}
+- {from: '00:59:40', packet: location, lat: -6.338591, lng: 107.271946, speed: 60, direction: 342}
+- {from: '00:59:50', packet: location, lat: -6.337398, lng: 107.272639, speed: 60, direction: 22}
+- {from: '01:00:00', packet: location, lat: -6.336001, lng: 107.273185, speed: 60, direction: 20}
+- {from: '01:00:10', packet: location, lat: -6.334596, lng: 107.273707, speed: 60, direction: 18}
+- {from: '01:00:20', packet: location, lat: -6.333161, lng: 107.274138, speed: 60, direction: 13}
+- {from: '01:00:30', packet: location, lat: -6.331689, lng: 107.274419, speed: 60, direction: 4}
+- {from: '01:00:40', packet: location, lat: -6.330193, lng: 107.274489, speed: 60, direction: 4}
+- {from: '01:00:50', packet: location, lat: -6.328698, lng: 107.274461, speed: 60, direction: 354}
+- {from: '01:01:00', packet: location, lat: -6.327216, lng: 107.27425, speed: 60, direction: 347}
+- {from: '01:01:10', packet: location, lat: -6.325763, lng: 107.273887, speed: 60, direction: 7}
+- {from: '01:01:20', packet: location, lat: -6.324344, lng: 107.273446, speed: 60, direction: 340}
+- {from: '01:01:30', packet: location, lat: -6.322993, lng: 107.272977, speed: 60, direction: 64}
+- {from: '01:01:40', packet: location, lat: -6.32268, lng: 107.274299, speed: 60, direction: 93}
+- {from: '01:01:50', packet: location, lat: -6.322757, lng: 107.275804, speed: 60, direction: 93}
+- {from: '01:02:00', packet: location, lat: -6.322822, lng: 107.27731, speed: 60, direction: 94}
+- {from: '01:02:10', packet: location, lat: -6.322642, lng: 107.278688, speed: 60, direction: 50}
+- {from: '01:02:20', step_name: trip_end, packet: location, lat: -6.321987, lng: 107.279001, speed: 60, direction: 93}
+- {from: '01:02:30', to: '01:22:30', every: '00:05:00', step_name: trip_park_end, packet: location, speed: 0, acc: false}
+- {from: '01:22:30', step_name: tow_start, packet: location, lat: -6.322524, lng: 107.278795, speed: 30, direction: 179}
+- {from: '01:22:40', packet: location, lat: -6.322881, lng: 107.278225, speed: 30, direction: 274}
+- {from: '01:22:50', packet: location, lat: -6.322833, lng: 107.277473, speed: 30, direction: 274}
+- {from: '01:23:00', packet: location, lat: -6.322792, lng: 107.27672, speed: 30, direction: 272}
+- {from: '01:23:10', step_name: assisted_start, packet: location, lat: -6.322765, lng: 107.275967, speed: 30, direction: 272}
+- {from: '01:23:20', packet: location, lat: -6.322727, lng: 107.275214, speed: 30, direction: 273}
+- {from: '01:23:30', packet: location, lat: -6.322689, lng: 107.274461, speed: 30, direction: 273}
+- {from: '01:23:40', packet: location, lat: -6.322801, lng: 107.273723, speed: 30, direction: 259}
+- {from: '01:23:50', packet: location, lat: -6.322985, lng: 107.272994, speed: 30, direction: 244}
+- {from: '01:24:00', packet: location, lat: -6.32363, lng: 107.273162, speed: 30, direction: 157}
+- {from: '01:24:10', packet: location, lat: -6.324327, lng: 107.273439, speed: 30, direction: 160}
+- {from: '01:24:20', packet: location, lat: -6.325029, lng: 107.273703, speed: 30, direction: 160}
+- {from: '01:24:30', packet: location, lat: -6.32572, lng: 107.273978, speed: 30, direction: 142}
+- {from: '01:24:40', packet: location, lat: -6.326437, lng: 107.274194, speed: 30, direction: 165}
+- {from: '01:24:50', packet: location, lat: -6.327162, lng: 107.274386, speed: 30, direction: 168}
+- {from: '01:25:00', packet: location, lat: -6.327901, lng: 107.274507, speed: 30, direction: 172}
+- {from: '01:25:10', packet: location, lat: -6.328645, lng: 107.274597, speed: 30, direction: 174}
+- {from: '01:25:20', packet: location, lat: -6.329392, lng: 107.274651, speed: 30, direction: 177}
+- {from: '01:25:30', packet: location, lat: -6.330141, lng: 107.274659, speed: 30, direction: 180}
+- {from: '01:25:40', packet: location, lat: -6.33089, lng: 107.274654, speed: 30, direction: 182}
+- {from: '01:25:50', packet: location, lat: -6.331632, lng: 107.274552, speed: 30, direction: 188}
+- {from: '01:26:00', packet: location, lat: -6.33237, lng: 107.274425, speed: 30, direction: 190}
+- {from: '01:26:10', packet: location, lat: -6.333104, lng: 107.274271, speed: 30, direction: 192}
+- {from: '01:26:20', packet: location, lat: -6.333829, lng: 107.274081, speed: 30, direction: 196}
+- {from: '01:26:30', packet: location, lat: -6.334546, lng: 107.273862, speed: 30, direction: 197}
+- {from: '01:26:40', packet: location, lat: -6.335253, lng: 107.273613, speed: 30, direction: 200}
+- {from: '01:26:50', packet: location, lat: -6.335956, lng: 107.273352, speed: 30, direction: 202}
+- {from: '01:27:00', packet: location, lat: -6.336657, lng: 107.273088, speed: 30, direction: 201}
+- {from: '01:27:10', packet: location, lat: -6.337356, lng: 107.272815, speed: 30, direction: 201}
+- {from: '01:27:20', packet: location, lat: -6.338075, lng: 107.272615, speed: 30, direction: 189}
+- {from: '01:27:30', packet: location, lat: -6.338755, lng: 107.272557, speed: 30, direction: 234}
+- {from: '01:27:40', packet: location, lat: -6.3393, lng: 107.272091, speed: 30, direction: 202}
+- {from: '01:27:50', packet: location, lat: -6.339979, lng: 107.271783, speed: 30, direction: 222}
+- {from: '01:28:00', packet: location, lat: -6.340658, lng: 107.271474, speed: 30, direction: 201}
+- {from: '01:28:10', packet: location, lat: -6.341363, lng: 107.271218, speed: 30, direction: 198}
+- {from: '01:28:20', packet: location, lat: -6.342065, lng: 107.270954, speed: 30, direction: 202}
+- {from: '01:28:30', packet: location, lat: -6.342768, lng: 107.270694, speed: 30, direction: 199}
+- {from: '01:28:40', packet: location, lat: -6.343478, lng: 107.270507, speed: 30, direction: 201}
+- {from: '01:28:50', packet: location, lat: -6.344175, lng: 107.270232, speed: 30, direction: 201}
+- {from: '01:29:00', packet: location, lat: -6.344885, lng: 107.26999, speed: 30, direction: 200}
+- {from: '01:29:10', packet: location, lat: -6.345603, lng: 107.269787, speed: 30, direction: 186}
+- {from: '01:29:20', packet: location, lat: -6.346309, lng: 107.269546, speed: 30, direction: 204}
+- {from: '01:29:30', packet: location, lat: -6.346964, lng: 107.269181, speed: 30, direction: 209}
+- {from: '01:29:40', packet: location, lat: -6.347687, lng: 107.269083, speed: 30, direction: 169}
+- {from: '01:29:50', packet: location, lat: -6.348295, lng: 107.26947, speed: 30, direction: 122}
+- {from: '01:30:00', packet: location, lat: -6.348635, lng: 107.270141, speed: 30, direction: 113}
+- {from: '01:30:10', packet: location, lat: -6.34878, lng: 107.270879, speed: 30, direction: 98}
+- {from: '01:30:20', packet: location, lat: -6.348888, lng: 107.271625, speed: 30, direction: 100}
+- {from: '01:30:30', packet: location, lat: -6.349011, lng: 107.272367, speed: 30, direction: 93}
+- {from: '01:30:40', packet: location, lat: -6.349054, lng: 107.27312, speed: 30, direction: 93}
+- {from: '01:30:50', packet: location, lat: -6.349097, lng: 107.273873, speed: 30, direction: 93}
+- {from: '01:31:00', packet: location, lat: -6.34914, lng: 107.274625, speed: 30, direction: 93}
+- {from: '01:31:10', packet: location, lat: -6.349182, lng: 107.275378, speed: 30, direction: 93}
+- {from: '01:31:20', packet: location, lat: -6.349227, lng: 107.27613, speed: 30, direction: 94}
+- {from: '01:31:30', packet: location, lat: -6.349278, lng: 107.276882, speed: 30, direction: 94}
+- {from: '01:31:40', packet: location, lat: -6.34933, lng: 107.277635, speed: 30, direction: 94}
+- {from: '01:31:50', packet: location, lat: -6.34936, lng: 107.278388, speed: 30, direction: 92}
+- {from: '01:32:00', packet: location, lat: -6.349374, lng: 107.279141, speed: 30, direction: 90}
+- {from: '01:32:10', packet: location, lat: -6.349405, lng: 107.279894, speed: 30, direction: 93}
+- {from: '01:32:20', packet: location, lat: -6.349449, lng: 107.280647, speed: 30, direction: 93}
+- {from: '01:32:30', packet: location, lat: -6.349492, lng: 107.281399, speed: 30, direction: 93}
+- {from: '01:32:40', packet: location, lat: -6.349536, lng: 107.282152, speed: 30, direction: 93}
+- {from: '01:32:50', packet: location, lat: -6.349576, lng: 107.282905, speed: 30, direction: 93}
+- {from: '01:33:00', packet: location, lat: -6.349616, lng: 107.283657, speed: 30, direction: 93}
+- {from: '01:33:10', packet: location, lat: -6.349655, lng: 107.28441, speed: 30, direction: 93}
+- {from: '01:33:20', packet: location, lat: -6.349695, lng: 107.285163, speed: 30, direction: 93}
+- {from: '01:33:30', packet: location, lat: -6.349734, lng: 107.285916, speed: 30, direction: 93}
+- {from: '01:33:40', packet: location, lat: -6.349774, lng: 107.286669, speed: 30, direction: 93}
+- {from: '01:33:50', packet: location, lat: -6.349814, lng: 107.287421, speed: 30, direction: 93}
+- {from: '01:34:00', packet: location, lat: -6.349853, lng: 107.288174, speed: 30, direction: 93}
+- {from: '01:34:10', packet: location, lat: -6.349893, lng: 107.288927, speed: 30, direction: 93}
+- {from: '01:34:20', packet: location, lat: -6.349932, lng: 107.28968, speed: 30, direction: 93}
+- {from: '01:34:30', packet: location, lat: -6.349972, lng: 107.290433, speed: 30, direction: 93}
+- {from: '01:34:40', packet: location, lat: -6.350012, lng: 107.291185, speed: 30, direction: 93}
+- {from: '01:34:50', packet: location, lat: -6.350051, lng: 107.291938, speed: 30, direction: 93}
+- {from: '01:35:00', packet: location, lat: -6.350091, lng: 107.292691, speed: 30, direction: 93}
+- {from: '01:35:10', packet: location, lat: -6.350126, lng: 107.293444, speed: 30, direction: 93}
+- {from: '01:35:20', packet: location, lat: -6.35016, lng: 107.294197, speed: 30, direction: 93}
+- {from: '01:35:30', packet: location, lat: -6.350196, lng: 107.29495, speed: 30, direction: 93}
+- {from: '01:35:40', packet: location, lat: -6.350236, lng: 107.295703, speed: 30, direction: 93}
+- {from: '01:35:50', packet: location, lat: -6.350277, lng: 107.296456, speed: 30, direction: 93}
+- {from: '01:36:00', packet: location, lat: -6.350318, lng: 107.297208, speed: 30, direction: 93}
+- {from: '01:36:10', packet: location, lat: -6.350358, lng: 107.297961, speed: 30, direction: 93}
+- {from: '01:36:20', packet: location, lat: -6.350399, lng: 107.298714, speed: 30, direction: 93}
+- {from: '01:36:30', packet: location, lat: -6.350444, lng: 107.299466, speed: 30, direction: 93}
+- {from: '01:36:40', packet: location, lat: -6.350488, lng: 107.300219, speed: 30, direction: 93}
+- {from: '01:36:50', packet: location, lat: -6.350533, lng: 107.300971, speed: 30, direction: 93}
+- {from: '01:37:00', packet: location, lat: -6.350577, lng: 107.301724, speed: 30, direction: 93}
+- {from: '01:37:10', packet: location, lat: -6.350615, lng: 107.302477, speed: 30, direction: 93}
+- {from: '01:37:20', packet: location, lat: -6.35065, lng: 107.30323, speed: 30, direction: 93}
+- {from: '01:37:30', packet: location, lat: -6.350685, lng: 107.303983, speed: 30, direction: 93}
+- {from: '01:37:40', packet: location, lat: -6.35072, lng: 107.304736, speed: 30, direction: 93}
+- {from: '01:37:50', packet: location, lat: -6.350756, lng: 107.305489, speed: 30, direction: 93}
+- {from: '01:38:00', packet: location, lat: -6.350795, lng: 107.306242, speed: 30, direction: 93}
+- {from: '01:38:10', packet: location, lat: -6.350834, lng: 107.306994, speed: 30, direction: 93}
+- {from: '01:38:20', packet: location, lat: -6.350872, lng: 107.307747, speed: 30, direction: 93}
+- {from: '01:38:30', packet: location, lat: -6.350911, lng: 107.3085, speed: 30, direction: 93}
+- {from: '01:38:40', packet: location, lat: -6.35095, lng: 107.309253, speed: 30, direction: 93}
+- {from: '01:38:50', packet: location, lat: -6.350992, lng: 107.310006, speed: 30, direction: 93}
+- {from: '01:39:00', packet: location, lat: -6.351037, lng: 107.310758, speed: 30, direction: 93}
+- {from: '01:39:10', packet: location, lat: -6.351091, lng: 107.31151, speed: 30, direction: 95}
+- {from: '01:39:20', packet: location, lat: -6.351151, lng: 107.312261, speed: 30, direction: 95}
+- {from: '01:39:30', packet: location, lat: -6.351221, lng: 107.313012, speed: 30, direction: 96}
+- {from: '01:39:40', packet: location, lat: -6.351299, lng: 107.313762, speed: 30, direction: 96}
+- {from: '01:39:50', packet: location, lat: -6.351378, lng: 107.314511, speed: 30, direction: 96}
+- {from: '01:40:00', packet: location, lat: -6.351457, lng: 107.315261, speed: 30, direction: 96}
+- {from: '01:40:10', packet: location, lat: -6.351536, lng: 107.316011, speed: 30, direction: 96}
+- {from: '01:40:20', packet: location, lat: -6.351624, lng: 107.316759, speed: 30, direction: 98}
+- {from: '01:40:30', packet: location, lat: -6.351722, lng: 107.317506, speed: 30, direction: 98}
+- {from: '01:40:40', packet: location, lat: -6.351828, lng: 107.318253, speed: 30, direction: 98}
+- {from: '01:40:50', packet: location, lat: -6.351942, lng: 107.318998, speed: 30, direction: 100}
+- {from: '01:41:00', packet: location, lat: -6.352074, lng: 107.31974, speed: 30, direction: 100}
+- {from: '01:41:10', packet: location, lat: -6.352206, lng: 107.320482, speed: 30, direction: 100}
+- {from: '01:41:20', packet: location, lat: -6.352338, lng: 107.321224, speed: 30, direction: 100}
+- {from: '01:41:30', packet: location, lat: -6.352488, lng: 107.321963, speed: 30, direction: 102}
+- {from: '01:41:40', packet: location, lat: -6.35264, lng: 107.322701, speed: 30, direction: 102}
+- {from: '01:41:50', packet: location, lat: -6.352792, lng: 107.323439, speed: 30, direction: 102}
+- {from: '01:42:00', packet: location, lat: -6.352943, lng: 107.324177, speed: 30, direction: 102}
+- {from: '01:42:10', packet: location, lat: -6.353095, lng: 107.324916, speed: 30, direction: 102}
+- {from: '01:42:20', packet: location, lat: -6.353258, lng: 107.325651, speed: 30, direction: 103}
+- {from: '01:42:30', packet: location, lat: -6.353426, lng: 107.326386, speed: 30, direction: 103}
+- {from: '01:42:40', packet: location, lat: -6.353614, lng: 107.327116, speed: 30, direction: 105}
+- {from: '01:42:50', packet: location, lat: -6.353805, lng: 107.327845, speed: 30, direction: 105}
+- {from: '01:43:00', packet: location, lat: -6.353998, lng: 107.328573, speed: 30, direction: 105}
+- {from: '01:43:10', packet: location, lat: -6.354197, lng: 107.3293, speed: 30, direction: 106}
+- {from: '01:43:20', packet: location, lat: -6.354409, lng: 107.330023, speed: 30, direction: 106}
+- {from: '01:43:30', packet: location, lat: -6.354621, lng: 107.330746, speed: 30, direction: 106}
+- {from: '01:43:40', packet: location, lat: -6.354833, lng: 107.331469, speed: 30, direction: 106}
+- {from: '01:43:50', packet: location, lat: -6.35506, lng: 107.332187, speed: 30, direction: 109}
+- {from: '01:44:00', packet: location, lat: -6.355302, lng: 107.332901, speed: 30, direction: 109}
+- {from: '01:44:10', packet: location, lat: -6.355544, lng: 107.333614, speed: 30, direction: 109}
+- {from: '01:44:20', packet: location, lat: -6.355785, lng: 107.334328, speed: 30, direction: 109}
+- {from: '01:44:30', packet: location, lat: -6.356027, lng: 107.335041, speed: 30, direction: 109}
+- {from: '01:44:40', packet: location, lat: -6.356269, lng: 107.335754, speed: 30, direction: 110}
+- {from: '01:44:50', packet: location, lat: -6.35653, lng: 107.336461, speed: 30, direction: 110}
+- {from: '01:45:00', packet: location, lat: -6.356793, lng: 107.337167, speed: 30, direction: 111}
+- {from: '01:45:10', packet: location, lat: -6.357065, lng: 107.33787, speed: 30, direction: 111}
+- {from: '01:45:20', packet: location, lat: -6.357338, lng: 107.338572, speed: 30, direction: 112}
+- {from: '01:45:30', packet: location, lat: -6.357615, lng: 107.339272, speed: 30, direction: 112}
+- {from: '01:45:40', packet: location, lat: -6.357892, lng: 107.339972, speed: 30, direction: 112}
+- {from: '01:45:50', packet: location, lat: -6.358187, lng: 107.340665, speed: 30, direction: 114}
+- {from: '01:46:00', packet: location, lat: -6.358489, lng: 107.341355, speed: 30, direction: 114}
+- {from: '01:46:10', packet: location, lat: -6.35879, lng: 107.342046, speed: 30, direction: 114}
+- {from: '01:46:20', packet: location, lat: -6.359091, lng: 107.342736, speed: 30, direction: 114}
+- {from: '01:46:30', packet: location, lat: -6.359393, lng: 107.343426, speed: 30, direction: 114}
+- {from: '01:46:40', packet: location, lat: -6.359715, lng: 107.344106, speed: 30, direction: 116}
+- {from: '01:46:50', packet: location, lat: -6.360043, lng: 107.344784, speed: 30, direction: 116}
+- {from: '01:47:00', packet: location, lat: -6.360371, lng: 107.345462, speed: 30, direction: 117}
+- {from: '01:47:10', packet: location, lat: -6.360716, lng: 107.346131, speed: 30, direction: 117}
+- {from: '01:47:20', packet: location, lat: -6.361062, lng: 107.3468, speed: 30, direction: 117}
+- {from: '01:47:30', packet: location, lat: -6.361407, lng: 107.347469, speed: 30, direction: 117}
+- {from: '01:47:40', packet: location, lat: -6.36176, lng: 107.348134, speed: 30, direction: 119}
+- {from: '01:47:50', packet: location, lat: -6.362125, lng: 107.348792, speed: 30, direction: 119}
+- {from: '01:48:00', packet: location, lat: -6.36249, lng: 107.349451, speed: 30, direction: 119}
+- {from: '01:48:10', packet: location, lat: -6.362854, lng: 107.35011, speed: 30, direction: 119}
+- {from: '01:48:20', packet: location, lat: -6.363223, lng: 107.350766, speed: 30, direction: 120}
+- {from: '01:48:30', packet: location, lat: -6.363595, lng: 107.35142, speed: 30, direction: 120}
+- {from: '01:48:40', packet: location, lat: -6.363967, lng: 107.352074, speed: 30, direction: 120}
+- {from: '01:48:50', packet: location, lat: -6.364339, lng: 107.352729, speed: 30, direction: 120}
+- {from: '01:49:00', packet: location, lat: -6.364711, lng: 107.353383, speed: 30, direction: 120}
+- {from: '01:49:10', packet: location, lat: -6.365083, lng: 107.354037, speed: 30, direction: 120}
+- {from: '01:49:20', packet: location, lat: -6.365455, lng: 107.354692, speed: 30, direction: 120}
+- {from: '01:49:30', packet: location, lat: -6.365828, lng: 107.355346, speed: 30, direction: 120}
+- {from: '01:49:40', packet: location, lat: -6.366201, lng: 107.356, speed: 30, direction: 120}
+- {from: '01:49:50', packet: location, lat: -6.366576, lng: 107.356652, speed: 30, direction: 120}
+- {from: '01:50:00', packet: location, lat: -6.366953, lng: 107.357304, speed: 30, direction: 120}
+- {from: '01:50:10', packet: location, lat: -6.367329, lng: 107.357956, speed: 30, direction: 120}
+- {from: '01:50:20', packet: location, lat: -6.367706, lng: 107.358607, speed: 30, direction: 120}
+- {from: '01:50:30', packet: location, lat: -6.368083, lng: 107.359259, speed: 30, direction: 120}
+- {from: '01:50:40', packet: location, lat: -6.36846, lng: 107.359911, speed: 30, direction: 120}
+- {from: '01:50:50', packet: location, lat: -6.368835, lng: 107.360563, speed: 30, direction: 120}
+- {from: '01:51:00', packet: location, lat: -6.369207, lng: 107.361217, speed: 30, direction: 120}
+- {from: '01:51:10', packet: location, lat: -6.369578, lng: 107.361872, speed: 30, direction: 120}
+- {from: '01:51:20', packet: location, lat: -6.36995, lng: 107.362527, speed: 30, direction: 120}
+- {from: '01:51:30', packet: location, lat: -6.370321, lng: 107.363182, speed: 30, direction: 120}
+- {from: '01:51:40', packet: location, lat: -6.370691, lng: 107.363837, speed: 30, direction: 120}
+- {from: '01:51:50', packet: location, lat: -6.371061, lng: 107.364493, speed: 30, direction: 120}
+- {from: '01:52:00', packet: location, lat: -6.371431, lng: 107.365148, speed: 30, direction: 120}
+- {from: '01:52:10', packet: location, lat: -6.371801, lng: 107.365804, speed: 30, direction: 120}
+- {from: '01:52:20', packet: location, lat: -6.372171, lng: 107.366459, speed: 30, direction: 120}
+- {from: '01:52:30', packet: location, lat: -6.372541, lng: 107.367115, speed: 30, direction: 120}
+- {from: '01:52:40', packet: location, lat: -6.372911, lng: 107.367771, speed: 30, direction: 120}
+- {from: '01:52:50', packet: location, lat: -6.373281, lng: 107.368426, speed: 30, direction: 120}
+- {from: '01:53:00', packet: location, lat: -6.373651, lng: 107.369082, speed: 30, direction: 120}
+- {from: '01:53:10', packet: location, lat: -6.374021, lng: 107.369737, speed: 30, direction: 120}
+- {from: '01:53:20', packet: location, lat: -6.37439, lng: 107.370393, speed: 30, direction: 120}
+- {from: '01:53:30', packet: location, lat: -6.37476, lng: 107.371049, speed: 30, direction: 120}
+- {from: '01:53:40', packet: location, lat: -6.37513, lng: 107.371704, speed: 30, direction: 120}
+- {from: '01:53:50', packet: location, lat: -6.3755, lng: 107.37236, speed: 30, direction: 120}
+- {from: '01:54:00', packet: location, lat: -6.37587, lng: 107.373015, speed: 30, direction: 120}
+- {from: '01:54:10', packet: location, lat: -6.37624, lng: 107.373671, speed: 30, direction: 120}
+- {from: '01:54:20', packet: location, lat: -6.376612, lng: 107.374325, speed: 30, direction: 120}
+- {from: '01:54:30', packet: location, lat: -6.376983, lng: 107.37498, speed: 30, direction: 120}
+- {from: '01:54:40', packet: location, lat: -6.377354, lng: 107.375635, speed: 30, direction: 120}
+- {from: '01:54:50', packet: location, lat: -6.377725, lng: 107.37629, speed: 30, direction: 120}
+- {from: '01:55:00', packet: location, lat: -6.378095, lng: 107.376946, speed: 30, direction: 120}
+- {from: '01:55:10', packet: location, lat: -6.378466, lng: 107.377601, speed: 30, direction: 120}
+- {from: '01:55:20', packet: location, lat: -6.378838, lng: 107.378255, speed: 30, direction: 121}
+- {from: '01:55:30', packet: location, lat: -6.37921, lng: 107.378909, speed: 30, direction: 119}
+- {from: '01:55:40', packet: location, lat: -6.379578, lng: 107.379566, speed: 30, direction: 120}
+- {from: '01:55:50', packet: location, lat: -6.379948, lng: 107.380222, speed: 30, direction: 120}
+- {from: '01:56:00', packet: location, lat: -6.380318, lng: 107.380877, speed: 30, direction: 120}
+- {from: '01:56:10', packet: location, lat: -6.380691, lng: 107.381531, speed: 30, direction: 120}
+- {from: '01:56:20', packet: location, lat: -6.381063, lng: 107.382185, speed: 30, direction: 120}
+- {from: '01:56:30', packet: location, lat: -6.381436, lng: 107.382839, speed: 30, direction: 120}
+- {from: '01:56:40', packet: location, lat: -6.381808, lng: 107.383494, speed: 30, direction: 120}
+- {from: '01:56:50', packet: location, lat: -6.382179, lng: 107.384148, speed: 30, direction: 120}
+- {from: '01:57:00', packet: location, lat: -6.382551, lng: 107.384803, speed: 30, direction: 120}
+- {from: '01:57:10', packet: location, lat: -6.382923, lng: 107.385457, speed: 30, direction: 120}
+- {from: '01:57:20', packet: location, lat: -6.383295, lng: 107.386112, speed: 30, direction: 120}
+- {from: '01:57:30', packet: location, lat: -6.383667, lng: 107.386766, speed: 30, direction: 120}
+- {from: '01:57:40', packet: location, lat: -6.384039, lng: 107.387421, speed: 30, direction: 120}
+- {from: '01:57:50', packet: location, lat: -6.38441, lng: 107.388075, speed: 30, direction: 120}
+- {from: '01:58:00', packet: location, lat: -6.384782, lng: 107.38873, speed: 30, direction: 120}
+- {from: '01:58:10', packet: location, lat: -6.385154, lng: 107.389385, speed: 30, direction: 120}
+- {from: '01:58:20', packet: location, lat: -6.385526, lng: 107.390039, speed: 30, direction: 120}
+- {from: '01:58:30', packet: location, lat: -6.385898, lng: 107.390693, speed: 30, direction: 120}
+- {from: '01:58:40', packet: location, lat: -6.38627, lng: 107.391348, speed: 30, direction: 120}
+- {from: '01:58:50', packet: location, lat: -6.386641, lng: 107.392003, speed: 30, direction: 120}
+- {from: '01:59:00', packet: location, lat: -6.387013, lng: 107.392657, speed: 30, direction: 120}
+- {from: '01:59:10', packet: location, lat: -6.387385, lng: 107.393312, speed: 30, direction: 120}
+- {from: '01:59:20', packet: location, lat: -6.387756, lng: 107.393966, speed: 30, direction: 120}
+- {from: '01:59:30', packet: location, lat: -6.388131, lng: 107.394619, speed: 30, direction: 120}
+- {from: '01:59:40', packet: location, lat: -6.388505, lng: 107.395273, speed: 30, direction: 120}
+- {from: '01:59:50', packet: location, lat: -6.388877, lng: 107.395927, speed: 30, direction: 120}
+- {from: '02:00:00', packet: location, lat: -6.389249, lng: 107.396581, speed: 30, direction: 120}
+- {from: '02:00:10', packet: location, lat: -6.389611, lng: 107.397241, speed: 30, direction: 119}
+- {from: '02:00:20', packet: location, lat: -6.389968, lng: 107.397904, speed: 30, direction: 119}
+- {from: '02:00:30', packet: location, lat: -6.390334, lng: 107.398562, speed: 30, direction: 120}
+- {from: '02:00:40', packet: location, lat: -6.390714, lng: 107.399212, speed: 30, direction: 121}
+- {from: '02:00:50', packet: location, lat: -6.391094, lng: 107.399861, speed: 30, direction: 120}
+- {from: '02:01:00', packet: location, lat: -6.39147, lng: 107.400514, speed: 30, direction: 120}
+- {from: '02:01:10', packet: location, lat: -6.391844, lng: 107.401167, speed: 30, direction: 120}
+- {from: '02:01:20', packet: location, lat: -6.392233, lng: 107.401811, speed: 30, direction: 122}
+- {from: '02:01:30', packet: location, lat: -6.392639, lng: 107.402444, speed: 30, direction: 124}
+- {from: '02:01:40', packet: location, lat: -6.393068, lng: 107.403063, speed: 30, direction: 126}
+- {from: '02:01:50', packet: location, lat: -6.393523, lng: 107.403661, speed: 30, direction: 129}
+- {from: '02:02:00', packet: location, lat: -6.393999, lng: 107.404243, speed: 30, direction: 130}
+- {from: '02:02:10', packet: location, lat: -6.394481, lng: 107.40482, speed: 30, direction: 134}
+- {from: '02:02:20', packet: location, lat: -6.395002, lng: 107.405362, speed: 30, direction: 134}
+- {from: '02:02:30', packet: location, lat: -6.395529, lng: 107.405898, speed: 30, direction: 137}
+- {from: '02:02:40', packet: location, lat: -6.396076, lng: 107.406414, speed: 30, direction: 137}
+- {from: '02:02:50', packet: location, lat: -6.39664, lng: 107.40691, speed: 30, direction: 139}
+- {from: '02:03:00', packet: location, lat: -6.397214, lng: 107.407394, speed: 30, direction: 141}
+- {from: '02:03:10', packet: location, lat: -6.397805, lng: 107.407856, speed: 30, direction: 144}
+- {from: '02:03:20', packet: location, lat: -6.398415, lng: 107.408294, speed: 30, direction: 144}
+- {from: '02:03:30', packet: location, lat: -6.399038, lng: 107.408714, speed: 30, direction: 147}
+- {from: '02:03:40', packet: location, lat: -6.399671, lng: 107.409116, speed: 30, direction: 149}
+- {from: '02:03:50', packet: location, lat: -6.400321, lng: 107.409491, speed: 30, direction: 152}
+- {from: '02:04:00', packet: location, lat: -6.400983, lng: 107.409844, speed: 30, direction: 152}
+- {from: '02:04:10', packet: location, lat: -6.401651, lng: 107.410186, speed: 30, direction: 156}
+- {from: '02:04:20', packet: location, lat: -6.402338, lng: 107.410488, speed: 30, direction: 156}
+- {from: '02:04:30', packet: location, lat: -6.403027, lng: 107.410783, speed: 30, direction: 160}
+- {from: '02:04:40', packet: location, lat: -6.40373, lng: 107.411043, speed: 30, direction: 159}
+- {from: '02:04:50', packet: location, lat: -6.404438, lng: 107.41129, speed: 30, direction: 161}
+- {from: '02:05:00', packet: location, lat: -6.405154, lng: 107.411511, speed: 30, direction: 163}
+- {from: '02:05:10', packet: location, lat: -6.405871, lng: 107.411731, speed: 30, direction: 163}
+- {from: '02:05:20', packet: location, lat: -6.406588, lng: 107.41195, speed: 30, direction: 163}
+- {from: '02:05:30', packet: location, lat: -6.407305, lng: 107.412169, speed: 30, direction: 163}
+- {from: '02:05:40', packet: location, lat: -6.408021, lng: 107.412388, speed: 30, direction: 163}
+- {from: '02:05:50', packet: location, lat: -6.408738, lng: 107.412608, speed: 30, direction: 163}
+- {from: '02:06:00', packet: location, lat: -6.409455, lng: 107.412827, speed: 30, direction: 163}
+- {from: '02:06:10', packet: location, lat: -6.41016, lng: 107.413081, speed: 30, direction: 160}
+- {from: '02:06:20', packet: location, lat: -6.410859, lng: 107.413352, speed: 30, direction: 157}
+- {from: '02:06:30', packet: location, lat: -6.411546, lng: 107.413653, speed: 30, direction: 157}
+- {from: '02:06:40', packet: location, lat: -6.412227, lng: 107.413968, speed: 30, direction: 155}
+- {from: '02:06:50', packet: location, lat: -6.41289, lng: 107.414319, speed: 30, direction: 152}
+- {from: '02:07:00', packet: location, lat: -6.413546, lng: 107.414683, speed: 30, direction: 150}
+- {from: '02:07:10', packet: location, lat: -6.41419, lng: 107.415068, speed: 30, direction: 148}
+- {from: '02:07:20', packet: location, lat: -6.414814, lng: 107.415486, speed: 30, direction: 146}
+- {from: '02:07:30', packet: location, lat: -6.415432, lng: 107.415911, speed: 30, direction: 145}
+- {from: '02:07:40', packet: location, lat: -6.41603, lng: 107.416365, speed: 30, direction: 140}
+- {from: '02:07:50', packet: location, lat: -6.416603, lng: 107.41685, speed: 30, direction: 140}
+- {from: '02:08:00', packet: location, lat: -6.417176, lng: 107.417336, speed: 30, direction: 140}
+- {from: '02:08:10', packet: location, lat: -6.417726, lng: 107.417847, speed: 30, direction: 134}
+- {from: '02:08:20', packet: location, lat: -6.41825, lng: 107.418386, speed: 30, direction: 134}
+- {from: '02:08:30', packet: location, lat: -6.418772, lng: 107.418927, speed: 30, direction: 134}
+- {from: '02:08:40', packet: location, lat: -6.419292, lng: 107.41947, speed: 30, direction: 134}
+- {from: '02:08:50', packet: location, lat: -6.419787, lng: 107.420034, speed: 30, direction: 128}
+- {from: '02:09:00', packet: location, lat: -6.420252, lng: 107.420625, speed: 30, direction: 128}
+- {from: '02:09:10', packet: location, lat: -6.420692, lng: 107.421235, speed: 30, direction: 123}
+- {from: '02:09:20', packet: location, lat: -6.421101, lng: 107.421866, speed: 30, direction: 123}
+- {from: '02:09:30', packet: location, lat: -6.421511, lng: 107.422498, speed: 30, direction: 123}
+- {from: '02:09:40', packet: location, lat: -6.421875, lng: 107.423156, speed: 30, direction: 118}
+- {from: '02:09:50', packet: location, lat: -6.42223, lng: 107.42382, speed: 30, direction: 118}
+- {from: '02:10:00', packet: location, lat: -6.422585, lng: 107.424484, speed: 30, direction: 114}
+- {from: '02:10:10', packet: location, lat: -6.422889, lng: 107.425173, speed: 30, direction: 114}
+- {from: '02:10:20', packet: location, lat: -6.42319, lng: 107.425863, speed: 30, direction: 112}
+- {from: '02:10:30', packet: location, lat: -6.423471, lng: 107.426562, speed: 30, direction: 112}
+- {from: '02:10:40', packet: location, lat: -6.423753, lng: 107.427261, speed: 30, direction: 112}
+- {from: '02:10:50', packet: location, lat: -6.424034, lng: 107.42796, speed: 30, direction: 112}
+- {from: '02:11:00', packet: location, lat: -6.424315, lng: 107.428659, speed: 30, direction: 112}
+- {from: '02:11:10', packet: location, lat: -6.424591, lng: 107.429359, speed: 30, direction: 112}
+- {from: '02:11:20', packet: location, lat: -6.424863, lng: 107.430062, speed: 30, direction: 112}
+- {from: '02:11:30', packet: location, lat: -6.425139, lng: 107.430763, speed: 30, direction: 112}
+- {from: '02:11:40', packet: location, lat: -6.425424, lng: 107.43146, speed: 30, direction: 112}
+- {from: '02:11:50', packet: location, lat: -6.425709, lng: 107.432158, speed: 30, direction: 112}
+- {from: '02:12:00', packet: location, lat: -6.425994, lng: 107.432855, speed: 30, direction: 112}
+- {from: '02:12:10', packet: location, lat: -6.426272, lng: 107.433555, speed: 30, direction: 112}
+- {from: '02:12:20', packet: location, lat: -6.426549, lng: 107.434256, speed: 30, direction: 112}
+- {from: '02:12:30', packet: location, lat: -6.426827, lng: 107.434956, speed: 30, direction: 112}
+- {from: '02:12:40', packet: location, lat: -6.427104, lng: 107.435656, speed: 30, direction: 112}
+- {from: '02:12:50', packet: location, lat: -6.427382, lng: 107.436356, speed: 30, direction: 112}
+- {from: '02:13:00', packet: location, lat: -6.427661, lng: 107.437056, speed: 30, direction: 112}
+- {from: '02:13:10', packet: location, lat: -6.427939, lng: 107.437756, speed: 30, direction: 112}
+- {from: '02:13:20', packet: location, lat: -6.428218, lng: 107.438456, speed: 30, direction: 112}
+- {from: '02:13:30', packet: location, lat: -6.428501, lng: 107.439154, speed: 30, direction: 112}
+- {from: '02:13:40', packet: location, lat: -6.428785, lng: 107.439852, speed: 30, direction: 112}
+- {from: '02:13:50', packet: location, lat: -6.429069, lng: 107.44055, speed: 30, direction: 112}
+- {from: '02:14:00', packet: location, lat: -6.429353, lng: 107.441247, speed: 30, direction: 112}
+- {from: '02:14:10', packet: location, lat: -6.429633, lng: 107.441947, speed: 30, direction: 111}
+- {from: '02:14:20', packet: location, lat: -6.429901, lng: 107.44265, speed: 30, direction: 111}
+- {from: '02:14:30', packet: location, lat: -6.43017, lng: 107.443354, speed: 30, direction: 111}
+- {from: '02:14:40', packet: location, lat: -6.430445, lng: 107.444055, speed: 30, direction: 112}
+- {from: '02:14:50', packet: location, lat: -6.430726, lng: 107.444755, speed: 30, direction: 112}
+- {from: '02:15:00', packet: location, lat: -6.431007, lng: 107.445454, speed: 30, direction: 112}
+- {from: '02:15:10', packet: location, lat: -6.431287, lng: 107.446153, speed: 30, direction: 112}
+- {from: '02:15:20', packet: location, lat: -6.431568, lng: 107.446852, speed: 30, direction: 112}
+- {from: '02:15:30', packet: location, lat: -6.431849, lng: 107.447551, speed: 30, direction: 112}
+- {from: '02:15:40', packet: location, lat: -6.43213, lng: 107.44825, speed: 30, direction: 112}
+- {from: '02:15:50', packet: location, lat: -6.432402, lng: 107.448952, speed: 30, direction: 111}
+- {from: '02:16:00', packet: location, lat: -6.432669, lng: 107.449656, speed: 30, direction: 111}
+- {from: '02:16:10', packet: location, lat: -6.432934, lng: 107.450362, speed: 30, direction: 110}
+- {from: '02:16:20', packet: location, lat: -6.433195, lng: 107.451068, speed: 30, direction: 110}
+- {from: '02:16:30', packet: location, lat: -6.433457, lng: 107.451775, speed: 30, direction: 111}
+- {from: '02:16:40', packet: location, lat: -6.433723, lng: 107.45248, speed: 30, direction: 111}
+- {from: '02:16:50', packet: location, lat: -6.433988, lng: 107.453185, speed: 30, direction: 111}
+- {from: '02:17:00', packet: location, lat: -6.434253, lng: 107.45389, speed: 30, direction: 111}
+- {from: '02:17:10', packet: location, lat: -6.434516, lng: 107.454596, speed: 30, direction: 110}
+- {from: '02:17:20', packet: location, lat: -6.434769, lng: 107.455306, speed: 30, direction: 110}
+- {from: '02:17:30', packet: location, lat: -6.435006, lng: 107.456021, speed: 30, direction: 108}
+- {from: '02:17:40', packet: location, lat: -6.435232, lng: 107.45674, speed: 30, direction: 108}
+- {from: '02:17:50', packet: location, lat: -6.435459, lng: 107.457458, speed: 30, direction: 108}
+- {from: '02:18:00', packet: location, lat: -6.435686, lng: 107.458177, speed: 30, direction: 108}
+- {from: '02:18:10', packet: location, lat: -6.435908, lng: 107.458897, speed: 30, direction: 107}
+- {from: '02:18:20', packet: location, lat: -6.436123, lng: 107.459619, speed: 30, direction: 107}
+- {from: '02:18:30', packet: location, lat: -6.436338, lng: 107.460341, speed: 30, direction: 106}
+- {from: '02:18:40', packet: location, lat: -6.43655, lng: 107.461065, speed: 30, direction: 106}
+- {from: '02:18:50', packet: location, lat: -6.436761, lng: 107.461788, speed: 30, direction: 106}
+- {from: '02:19:00', packet: location, lat: -6.436973, lng: 107.462511, speed: 30, direction: 106}
+- {from: '02:19:10', packet: location, lat: -6.437184, lng: 107.463235, speed: 30, direction: 106}
+- {from: '02:19:20', packet: location, lat: -6.437396, lng: 107.463958, speed: 30, direction: 106}
+- {from: '02:19:30', packet: location, lat: -6.437607, lng: 107.464681, speed: 30, direction: 106}
+- {from: '02:19:40', packet: location, lat: -6.437818, lng: 107.465405, speed: 30, direction: 106}
+- {from: '02:19:50', packet: location, lat: -6.43803, lng: 107.466128, speed: 30, direction: 106}
+- {from: '02:20:00', packet: location, lat: -6.438241, lng: 107.466851, speed: 30, direction: 106}
+- {from: '02:20:10', packet: location, lat: -6.438405, lng: 107.467587, speed: 30, direction: 101}
+- {from: '02:20:20', packet: location, lat: -6.438541, lng: 107.468328, speed: 30, direction: 99}
+- {from: '02:20:30', packet: location, lat: -6.438591, lng: 107.469079, speed: 30, direction: 88}
+- {from: '02:20:40', packet: location, lat: -6.438487, lng: 107.469824, speed: 30, direction: 75}
+- {from: '02:20:50', packet: location, lat: -6.438239, lng: 107.470535, speed: 30, direction: 67}
+- {from: '02:21:00', packet: location, lat: -6.438058, lng: 107.471263, speed: 30, direction: 84}
+- {from: '02:21:10', packet: location, lat: -6.438131, lng: 107.472008, speed: 30, direction: 107}
+- {from: '02:21:20', packet: location, lat: -6.438391, lng: 107.472715, speed: 30, direction: 111}
+- {from: '02:21:30', packet: location, lat: -6.438652, lng: 107.473422, speed: 30, direction: 110}
+- {from: '02:21:40', packet: location, lat: -6.438901, lng: 107.474133, speed: 30, direction: 110}
+- {from: '02:21:50', packet: location, lat: -6.439157, lng: 107.474841, speed: 30, direction: 110}
+- {from: '02:22:00', packet: location, lat: -6.439421, lng: 107.475547, speed: 30, direction: 111}
+- {from: '02:22:10', packet: location, lat: -6.439675, lng: 107.476256, speed: 30, direction: 110}
+- {from: '02:22:20', packet: location, lat: -6.439945, lng: 107.47696, speed: 30, direction: 111}
+- {from: '02:22:30', packet: location, lat: -6.44021, lng: 107.477665, speed: 30, direction: 109}
+- {from: '02:22:40', packet: location, lat: -6.440436, lng: 107.478384, speed: 30, direction: 106}
+- {from: '02:22:50', packet: location, lat: -6.440781, lng: 107.478942, speed: 30, direction: 182}
+- {from: '02:23:00', packet: location, lat: -6.44153, lng: 107.478934, speed: 30, direction: 178}
+- {from: '02:23:10', packet: location, lat: -6.442279, lng: 107.478958, speed: 30, direction: 178}
+- {from: '02:23:20', packet: location, lat: -6.443026, lng: 107.478946, speed: 30, direction: 187}
+- {from: '02:23:30', packet: location, lat: -6.443775, lng: 107.478947, speed: 30, direction: 179}
+- {from: '02:23:40', packet: location, lat: -6.444523, lng: 107.478987, speed: 30, direction: 177}
+- {from: '02:23:50', packet: location, lat: -6.44527, lng: 107.479032, speed: 30, direction: 175}
+- {from: '02:24:00', packet: location, lat: -6.446017, lng: 107.4791, speed: 30, direction: 173}
+- {from: '02:24:10', packet: location, lat: -6.44676, lng: 107.479195, speed: 30, direction: 172}
+- {from: '02:24:20', packet: location, lat: -6.447505, lng: 107.479272, speed: 30, direction: 175}
+- {from: '02:24:30', packet: location, lat: -6.448251, lng: 107.479341, speed: 30, direction: 175}
+- {from: '02:24:40', packet: location, lat: -6.448995, lng: 107.479428, speed: 30, direction: 173}
+- {from: '02:24:50', packet: location, lat: -6.449739, lng: 107.479519, speed: 30, direction: 172}
+- {from: '02:25:00', packet: location, lat: -6.450478, lng: 107.479641, speed: 30, direction: 170}
+- {from: '02:25:10', packet: location, lat: -6.451219, lng: 107.479753, speed: 30, direction: 171}
+- {from: '02:25:20', packet: location, lat: -6.451958, lng: 107.479874, speed: 30, direction: 172}
+- {from: '02:25:30', packet: location, lat: -6.452697, lng: 107.480001, speed: 30, direction: 169}
+- {from: '02:25:40', packet: location, lat: -6.453437, lng: 107.480115, speed: 30, direction: 170}
+- {from: '02:25:50', packet: location, lat: -6.454177, lng: 107.480234, speed: 30, direction: 170}
+- {from: '02:26:00', packet: location, lat: -6.454916, lng: 107.480354, speed: 30, direction: 171}
+- {from: '02:26:10', packet: location, lat: -6.455657, lng: 107.480471, speed: 30, direction: 172}
+- {from: '02:26:20', packet: location, lat: -6.456403, lng: 107.48052, speed: 30, direction: 181}
+- {from: '02:26:30', packet: location, lat: -6.457152, lng: 107.480497, speed: 30, direction: 182}
+- {from: '02:26:40', packet: location, lat: -6.457901, lng: 107.480478, speed: 30, direction: 181}
+- {from: '02:26:50', packet: location, lat: -6.45865, lng: 107.480471, speed: 30, direction: 179}
+- {from: '02:27:00', packet: location, lat: -6.459399, lng: 107.480454, speed: 30, direction: 183}
+- {from: '02:27:10', packet: location, lat: -6.460147, lng: 107.480426, speed: 30, direction: 182}
+- {from: '02:27:20', packet: location, lat: -6.460896, lng: 107.480395, speed: 30, direction: 182}
+- {from: '02:27:30', packet: location, lat: -6.461645, lng: 107.480379, speed: 30, direction: 180}
+- {from: '02:27:40', packet: location, lat: -6.462394, lng: 107.480385, speed: 30, direction: 177}
+- {from: '02:27:50', packet: location, lat: -6.463142, lng: 107.480428, speed: 30, direction: 176}
+- {from: '02:28:00', packet: location, lat: -6.463889, lng: 107.480478, speed: 30, direction: 176}
+- {from: '02:28:10', packet: location, lat: -6.464638, lng: 107.480519, speed: 30, direction: 177}
+- {from: '02:28:20', packet: location, lat: -6.465387, lng: 107.480534, speed: 30, direction: 179}
+- {from: '02:28:30', packet: location, lat: -6.466136, lng: 107.480545, speed: 30, direction: 179}
+- {from: '02:28:40', packet: location, lat: -6.466885, lng: 107.480565, speed: 30, direction: 182}
+- {from: '02:28:50', packet: location, lat: -6.467633, lng: 107.480535, speed: 30, direction: 182}
+- {from: '02:29:00', packet: location, lat: -6.468381, lng: 107.480485, speed: 30, direction: 184}
+- {from: '02:29:10', packet: location, lat: -6.469128, lng: 107.480427, speed: 30, direction: 184}
+- {from: '02:29:20', packet: location, lat: -6.469875, lng: 107.480371, speed: 30, direction: 183}
+- {from: '02:29:30', packet: location, lat: -6.470621, lng: 107.480308, speed: 30, direction: 186}
+- {from: '02:29:40', packet: location, lat: -6.471368, lng: 107.480252, speed: 30, direction: 183}
+- {from: '02:29:50', packet: location, lat: -6.472117, lng: 107.480226, speed: 30, direction: 177}
+- {from: '02:30:00', packet: location, lat: -6.472866, lng: 107.480256, speed: 30, direction: 178}
+- {from: '02:30:10', packet: location, lat: -6.473614, lng: 107.480288, speed: 30, direction: 178}
+- {from: '02:30:20', packet: location, lat: -6.474363, lng: 107.480314, speed: 30, direction: 178}
+- {from: '02:30:30', packet: location, lat: -6.475112, lng: 107.480339, speed: 30, direction: 178}
+- {from: '02:30:40', packet: location, lat: -6.47586, lng: 107.480365, speed: 30, direction: 179}
+- {from: '02:30:50', packet: location, lat: -6.476609, lng: 107.480376, speed: 30, direction: 180}
+- {from: '02:31:00', packet: location, lat: -6.477359, lng: 107.480383, speed: 30, direction: 179}
+- {from: '02:31:10', packet: location, lat: -6.478108, lng: 107.480382, speed: 30, direction: 184}
+- {from: '02:31:20', packet: location, lat: -6.478856, lng: 107.480349, speed: 30, direction: 184}
+- {from: '02:31:30', packet: location, lat: -6.479602, lng: 107.480276, speed: 30, direction: 186}
+- {from: '02:31:40', packet: location, lat: -6.480343, lng: 107.480168, speed: 30, direction: 189}
+- {from: '02:31:50', packet: location, lat: -6.481083, lng: 107.48005, speed: 30, direction: 189}
+- {from: '02:32:00', packet: location, lat: -6.481823, lng: 107.479933, speed: 30, direction: 186}
+- {from: '02:32:10', packet: location, lat: -6.482558, lng: 107.47979, speed: 30, direction: 193}
+- {from: '02:32:20', packet: location, lat: -6.483275, lng: 107.479571, speed: 30, direction: 197}
+- {from: '02:32:30', packet: location, lat: -6.483985, lng: 107.479332, speed: 30, direction: 201}
+- {from: '02:32:40', packet: location, lat: -6.484685, lng: 107.479063, speed: 30, direction: 201}
+- {from: '02:32:50', packet: location, lat: -6.48539, lng: 107.478809, speed: 30, direction: 200}
+- {from: '02:33:00', packet: location, lat: -6.486095, lng: 107.478555, speed: 30, direction: 193}
+- {from: '02:33:10', packet: location, lat: -6.486781, lng: 107.478286, speed: 30, direction: 201}
+- {from: '02:33:20', packet: location, lat: -6.48747, lng: 107.477989, speed: 30, direction: 205}
+- {from: '02:33:30', packet: location, lat: -6.488142, lng: 107.477657, speed: 30, direction: 205}
+- {from: '02:33:40', packet: location, lat: -6.488812, lng: 107.47732, speed: 30, direction: 207}
+- {from: '02:33:50', packet: location, lat: -6.489481, lng: 107.476979, speed: 30, direction: 207}
+- {from: '02:34:00', packet: location, lat: -6.490146, lng: 107.476633, speed: 30, direction: 207}
+- {from: '02:34:10', packet: location, lat: -6.490806, lng: 107.476277, speed: 30, direction: 206}
+- {from: '02:34:20', packet: location, lat: -6.491464, lng: 107.475917, speed: 30, direction: 208}
+- {from: '02:34:30', packet: location, lat: -6.492124, lng: 107.475559, speed: 30, direction: 209}
+- {from: '02:34:40', packet: location, lat: -6.492786, lng: 107.475206, speed: 30, direction: 210}
+- {from: '02:34:50', packet: location, lat: -6.493435, lng: 107.474829, speed: 30, direction: 210}
+- {from: '02:35:00', packet: location, lat: -6.494084, lng: 107.474454, speed: 30, direction: 211}
+- {from: '02:35:10', packet: location, lat: -6.494731, lng: 107.474072, speed: 30, direction: 213}
+- {from: '02:35:20', packet: location, lat: -6.495369, lng: 107.473679, speed: 30, direction: 211}
+- {from: '02:35:30', packet: location, lat: -6.49603, lng: 107.473324, speed: 30, direction: 206}
+- {from: '02:35:40', packet: location, lat: -6.496717, lng: 107.473024, speed: 30, direction: 204}
+- {from: '02:35:50', packet: location, lat: -6.497396, lng: 107.472705, speed: 30, direction: 209}
+- {from: '02:36:00', packet: location, lat: -6.498018, lng: 107.472287, speed: 30, direction: 214}
+- {from: '02:36:10', packet: location, lat: -6.498594, lng: 107.471806, speed: 30, direction: 221}
+- {from: '02:36:20', packet: location, lat: -6.499159, lng: 107.471312, speed: 30, direction: 223}
+- {from: '02:36:30', packet: location, lat: -6.49971, lng: 107.470802, speed: 30, direction: 223}
+- {from: '02:36:40', packet: location, lat: -6.500254, lng: 107.470284, speed: 30, direction: 222}
+- {from: '02:36:50', packet: location, lat: -6.500814, lng: 107.469783, speed: 30, direction: 222}
+- {from: '02:37:00', packet: location, lat: -6.501348, lng: 107.469256, speed: 30, direction: 226}
+- {from: '02:37:10', packet: location, lat: -6.501901, lng: 107.468754, speed: 30, direction: 230}
+- {from: '02:37:20', packet: location, lat: -6.502358, lng: 107.468156, speed: 30, direction: 233}
+- {from: '02:37:30', packet: location, lat: -6.502794, lng: 107.467543, speed: 30, direction: 234}
+- {from: '02:37:40', packet: location, lat: -6.503244, lng: 107.46694, speed: 30, direction: 234}
+- {from: '02:37:50', packet: location, lat: -6.503689, lng: 107.466334, speed: 30, direction: 234}
+- {from: '02:38:00', packet: location, lat: -6.504111, lng: 107.465713, speed: 30, direction: 232}
+- {from: '02:38:10', packet: location, lat: -6.504561, lng: 107.46511, speed: 30, direction: 233}
+- {from: '02:38:20', packet: location, lat: -6.505019, lng: 107.464513, speed: 30, direction: 232}
+- {from: '02:38:30', packet: location, lat: -6.505481, lng: 107.46392, speed: 30, direction: 232}
+- {from: '02:38:40', packet: location, lat: -6.505954, lng: 107.463335, speed: 30, direction: 232}
+- {from: '02:38:50', packet: location, lat: -6.506417, lng: 107.462742, speed: 30, direction: 230}
+- {from: '02:39:00', packet: location, lat: -6.50691, lng: 107.462175, speed: 30, direction: 227}
+- {from: '02:39:10', packet: location, lat: -6.507468, lng: 107.461672, speed: 30, direction: 222}
+- {from: '02:39:20', packet: location, lat: -6.508073, lng: 107.461235, speed: 30, direction: 204}
+- {from: '02:39:30', packet: location, lat: -6.508642, lng: 107.460748, speed: 30, direction: 221}
+- {from: '02:39:40', packet: location, lat: -6.509134, lng: 107.460181, speed: 30, direction: 217}
+- {from: '02:39:50', packet: location, lat: -6.509722, lng: 107.459714, speed: 30, direction: 220}
+- {from: '02:40:00', packet: location, lat: -6.510288, lng: 107.459222, speed: 30, direction: 227}
+- {from: '02:40:10', packet: location, lat: -6.510818, lng: 107.458689, speed: 30, direction: 225}
+- {from: '02:40:20', packet: location, lat: -6.511339, lng: 107.458149, speed: 30, direction: 223}
+- {from: '02:40:30', packet: location, lat: -6.511873, lng: 107.457621, speed: 30, direction: 227}
+- {from: '02:40:40', packet: location, lat: -6.512398, lng: 107.457083, speed: 30, direction: 222}
+- {from: '02:40:50', packet: location, lat: -6.512925, lng: 107.456548, speed: 30, direction: 228}
+- {from: '02:41:00', packet: location, lat: -6.513447, lng: 107.456007, speed: 30, direction: 225}
+- {from: '02:41:10', packet: location, lat: -6.513972, lng: 107.455469, speed: 30, direction: 224}
+- {from: '02:41:20', packet: location, lat: -6.514494, lng: 107.454929, speed: 30, direction: 226}
+- {from: '02:41:30', packet: location, lat: -6.51501, lng: 107.454382, speed: 30, direction: 227}
+- {from: '02:41:40', packet: location, lat: -6.51553, lng: 107.453839, speed: 30, direction: 233}
+- {from: '02:41:50', packet: location, lat: -6.516035, lng: 107.453283, speed: 30, direction: 226}
+- {from: '02:42:00', packet: location, lat: -6.51655, lng: 107.452736, speed: 30, direction: 227}
+- {from: '02:42:10', packet: location, lat: -6.517024, lng: 107.452154, speed: 30, direction: 239}
+- {from: '02:42:20', packet: location, lat: -6.517262, lng: 107.451443, speed: 30, direction: 258}
+- {from: '02:42:30', packet: location, lat: -6.517345, lng: 107.450695, speed: 30, direction: 269}
+- {from: '02:42:40', packet: location, lat: -6.517422, lng: 107.449948, speed: 30, direction: 253}
+- {from: '02:42:50', packet: location, lat: -6.51793, lng: 107.449433, speed: 30, direction: 207}
+- {from: '02:43:00', packet: location, lat: -6.518645, lng: 107.449226, speed: 30, direction: 185}
+- {from: '02:43:10', packet: location, lat: -6.519394, lng: 107.449204, speed: 30, direction: 179}
+- {from: '02:43:20', packet: location, lat: -6.520141, lng: 107.449157, speed: 30, direction: 185}
+- {from: '02:43:30', packet: location, lat: -6.520882, lng: 107.449048, speed: 30, direction: 188}
+- {from: '02:43:40', packet: location, lat: -6.52162, lng: 107.448923, speed: 30, direction: 192}
+- {from: '02:43:50', packet: location, lat: -6.522348, lng: 107.448747, speed: 30, direction: 196}
+- {from: '02:44:00', packet: location, lat: -6.523067, lng: 107.448537, speed: 30, direction: 203}
+- {from: '02:44:10', packet: location, lat: -6.523775, lng: 107.448294, speed: 30, direction: 194}
+- {from: '02:44:20', packet: location, lat: -6.524488, lng: 107.448064, speed: 30, direction: 199}
+- {from: '02:44:30', packet: location, lat: -6.525205, lng: 107.447847, speed: 30, direction: 196}
+- {from: '02:44:40', packet: location, lat: -6.525923, lng: 107.447633, speed: 30, direction: 197}
+- {from: '02:44:50', packet: location, lat: -6.526644, lng: 107.447427, speed: 30, direction: 197}
+- {from: '02:45:00', packet: location, lat: -6.527368, lng: 107.44724, speed: 30, direction: 196}
+- {from: '02:45:10', packet: location, lat: -6.52809, lng: 107.447038, speed: 30, direction: 194}
+- {from: '02:45:20', packet: location, lat: -6.528813, lng: 107.446842, speed: 30, direction: 196}
+- {from: '02:45:30', packet: location, lat: -6.529533, lng: 107.446633, speed: 30, direction: 195}
+- {from: '02:45:40', packet: location, lat: -6.530256, lng: 107.446437, speed: 30, direction: 196}
+- {from: '02:45:50', packet: location, lat: -6.530975, lng: 107.446224, speed: 30, direction: 197}
+- {from: '02:46:00', packet: location, lat: -6.531693, lng: 107.446009, speed: 30, direction: 196}
+- {from: '02:46:10', packet: location, lat: -6.53241, lng: 107.445792, speed: 30, direction: 197}
+- {from: '02:46:20', packet: location, lat: -6.533127, lng: 107.445573, speed: 30, direction: 197}
+- {from: '02:46:30', packet: location, lat: -6.533844, lng: 107.445351, speed: 30, direction: 198}
+- {from: '02:46:40', packet: location, lat: -6.53456, lng: 107.445132, speed: 30, direction: 198}
+- {from: '02:46:50', packet: location, lat: -6.535282, lng: 107.444931, speed: 30, direction: 193}
+- {from: '02:47:00', packet: location, lat: -6.536004, lng: 107.444731, speed: 30, direction: 196}
+- {from: '02:47:10', packet: location, lat: -6.536727, lng: 107.444533, speed: 30, direction: 195}
+- {from: '02:47:20', packet: location, lat: -6.537458, lng: 107.444369, speed: 30, direction: 191}
+- {from: '02:47:30', packet: location, lat: -6.538196, lng: 107.44424, speed: 30, direction: 189}
+- {from: '02:47:40', packet: location, lat: -6.538938, lng: 107.444133, speed: 30, direction: 187}
+- {from: '02:47:50', packet: location, lat: -6.539679, lng: 107.444026, speed: 30, direction: 188}
+- {from: '02:48:00', packet: location, lat: -6.540421, lng: 107.443919, speed: 30, direction: 188}
+- {from: '02:48:10', packet: location, lat: -6.541163, lng: 107.443818, speed: 30, direction: 186}
+- {from: '02:48:20', packet: location, lat: -6.541908, lng: 107.443733, speed: 30, direction: 186}
+- {from: '02:48:30', packet: location, lat: -6.542652, lng: 107.443649, speed: 30, direction: 186}
+- {from: '02:48:40', packet: location, lat: -6.543399, lng: 107.443594, speed: 30, direction: 182}
+- {from: '02:48:50', packet: location, lat: -6.544148, lng: 107.443571, speed: 30, direction: 180}
+- {from: '02:49:00', packet: location, lat: -6.544759, lng: 107.443712, speed: 30, direction: 91}
+- {from: '02:49:10', packet: location, lat: -6.544774, lng: 107.444466, speed: 30, direction: 92}
+- {from: '02:49:20', packet: location, lat: -6.544901, lng: 107.445205, speed: 30, direction: 110}
+- {from: '02:49:30', packet: location, lat: -6.545385, lng: 107.445535, speed: 30, direction: 196}
+- {from: '02:49:40', packet: location, lat: -6.545743, lng: 107.444998, speed: 30, direction: 264}
+- {from: '02:49:50', packet: location, lat: -6.545789, lng: 107.444245, speed: 30, direction: 267}
+- {from: '02:50:00', packet: location, lat: -6.545944, lng: 107.443585, speed: 30, direction: 177}
+- {from: '02:50:10', packet: location, lat: -6.546693, lng: 107.443623, speed: 30, direction: 177}
+- {from: '02:50:20', packet: location, lat: -6.547441, lng: 107.443659, speed: 30, direction: 178}
+- {from: '02:50:30', packet: location, lat: -6.54819, lng: 107.443681, speed: 30, direction: 179}
+- {from: '02:50:40', packet: location, lat: -6.548939, lng: 107.443694, speed: 30, direction: 179}
+- {from: '02:50:50', packet: location, lat: -6.549688, lng: 107.443712, speed: 30, direction: 179}
+- {from: '02:51:00', packet: location, lat: -6.550437, lng: 107.443723, speed: 30, direction: 180}
+- {from: '02:51:10', packet: location, lat: -6.551185, lng: 107.443751, speed: 30, direction: 176}
+- {from: '02:51:20', packet: location, lat: -6.551934, lng: 107.443787, speed: 30, direction: 179}
+- {from: '02:51:30', packet: location, lat: -6.552683, lng: 107.443797, speed: 30, direction: 179}
+- {from: '02:51:40', packet: location, lat: -6.553432, lng: 107.443808, speed: 30, direction: 179}
+- {from: '02:51:50', packet: location, lat: -6.55418, lng: 107.443843, speed: 30, direction: 179}
+- {from: '02:52:00', packet: location, lat: -6.554929, lng: 107.443853, speed: 30, direction: 180}
+- {from: '02:52:10', packet: location, lat: -6.555674, lng: 107.443892, speed: 30, direction: 180}
+- {from: '02:52:20', packet: location, lat: -6.556423, lng: 107.443897, speed: 30, direction: 180}
+- {from: '02:52:30', step_name: tow_end, packet: location, lat: -6.556502, lng: 107.443338, speed: 30, direction: 275}
+- {from: '02:52:40', to: '03:17:40', every: '00:05:00', step_name: assisted_park_end, packet: location, speed: 0}
+- {from: '03:17:40', to: '03:18:40', packet: location, acc: true}
+- {from: '03:18:40', step_name: buffer_trip_start, packet: location, lat: -6.55559, lng: 107.443838, speed: 60, direction: 359}
+- {from: '03:18:50', packet: location, lat: -6.554093, lng: 107.443841, speed: 60, direction: 359}
+- {from: '03:19:00', packet: location, lat: -6.552596, lng: 107.443796, speed: 60, direction: 359}
+- {from: '03:19:10', packet: location, lat: -6.551099, lng: 107.443744, speed: 60, direction: 356}
+- {from: '03:19:20', packet: location, lat: -6.549601, lng: 107.44371, speed: 60, direction: 359}
+- {from: '03:19:30', packet: location, lat: -6.548103, lng: 107.443679, speed: 60, direction: 359}
+- {from: '03:19:40', packet: location, lat: -6.546606, lng: 107.443618, speed: 60, direction: 357}
+- {from: '03:19:50', packet: location, lat: -6.545108, lng: 107.443573, speed: 60, direction: 0}
+- {from: '03:20:00', packet: location, lat: -6.54361, lng: 107.443587, speed: 60, direction: 2}
+- {from: '03:20:10', packet: location, lat: -6.542117, lng: 107.443709, speed: 60, direction: 6}
+- {from: '03:20:20', packet: location, lat: -6.54063, lng: 107.443891, speed: 60, direction: 8}
+- {from: '03:20:30', packet: location, lat: -6.539147, lng: 107.444106, speed: 60, direction: 7}
+- {from: '03:20:40', packet: location, lat: -6.537665, lng: 107.444328, speed: 60, direction: 11}
+- {from: '03:20:50', packet: location, lat: -6.536207, lng: 107.444671, speed: 60, direction: 16}
+- {from: '03:21:00', packet: location, lat: -6.534761, lng: 107.445064, speed: 60, direction: 18}
+- {from: '03:21:10', packet: location, lat: -6.53333, lng: 107.445512, speed: 60, direction: 17}
+- {from: '03:21:20', packet: location, lat: -6.531896, lng: 107.44595, speed: 60, direction: 17}
+- {from: '03:21:30', packet: location, lat: -6.530459, lng: 107.446378, speed: 60, direction: 16}
+- {from: '03:21:40', packet: location, lat: -6.529016, lng: 107.446784, speed: 60, direction: 16}
+- {from: '03:21:50', packet: location, lat: -6.52757, lng: 107.447179, speed: 60, direction: 17}
+- {from: '03:22:00', packet: location, lat: -6.526125, lng: 107.447572, speed: 60, direction: 17}
+- {from: '03:22:10', packet: location, lat: -6.524688, lng: 107.447999, speed: 60, direction: 16}
+- {from: '03:22:20', packet: location, lat: -6.523262, lng: 107.448454, speed: 60, direction: 23}
+- {from: '03:22:30', packet: location, lat: -6.521827, lng: 107.448881, speed: 60, direction: 11}
+- {from: '03:22:40', packet: location, lat: -6.520351, lng: 107.449136, speed: 60, direction: 10}
+- {from: '03:22:50', packet: location, lat: -6.518856, lng: 107.44921, speed: 60, direction: 2}
+- {from: '03:23:00', packet: location, lat: -6.517517, lng: 107.449759, speed: 60, direction: 60}
+- {from: '03:23:10', packet: location, lat: -6.5173, lng: 107.451234, speed: 60, direction: 83}
+- {from: '03:23:20', packet: location, lat: -6.516693, lng: 107.452579, speed: 60, direction: 48}
+- {from: '03:23:30', step_name: realtime_end, packet: location, lat: -6.515667, lng: 107.453679, speed: 60, direction: 48}
+- {from: '03:23:40', step_name: disconnected, packet: disconnect}
+- {from: '04:24:00', step_name: relogin, packet: login}
+- {from: '04:24:00', step_name: reconnected, packet: connect, ip_gate: 10.10.10.10, port_gate: random}
+- {from: '03:24:00', step_name: buffer_start, packet: location, batch: offline, sent_at: '04:24:00', lat: -6.512555, lng: 107.45694, speed: 60, direction: 42}
+- {from: '03:24:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.509303, lng: 107.460054, speed: 60, direction: 39}
+- {from: '03:25:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.50651, lng: 107.457696, speed: 60, direction: 338}
+- {from: '03:25:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.503101, lng: 107.45487, speed: 60, direction: 308}
+- {from: '03:26:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.500406, lng: 107.45125, speed: 60, direction: 305}
+- {from: '03:26:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.498556, lng: 107.447239, speed: 60, direction: 296}
+- {from: '03:27:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.49688, lng: 107.443064, speed: 60, direction: 286}
+- {from: '03:27:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.496707, lng: 107.442625, speed: 60, direction: 37}
+- {from: '03:28:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.492585, lng: 107.4443, speed: 60, direction: 7}
+- {from: '03:28:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.488196, lng: 107.44522, speed: 60, direction: 20}
+- {from: '03:29:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.48401, lng: 107.446836, speed: 60, direction: 11}
+- {from: '03:29:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.479542, lng: 107.447262, speed: 60, direction: 0}
+- {from: '03:30:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.475065, lng: 107.446926, speed: 60, direction: 350}
+- {from: '03:30:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.470714, lng: 107.445845, speed: 60, direction: 337}
+- {from: '03:31:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.46658, lng: 107.444082, speed: 60, direction: 333}
+- {from: '03:31:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.462791, lng: 107.441659, speed: 60, direction: 323}
+- {from: '03:32:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.459466, lng: 107.438624, speed: 60, direction: 312}
+- {from: '03:32:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.456573, lng: 107.435173, speed: 60, direction: 322}
+- {from: '03:33:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.45259, lng: 107.433146, speed: 60, direction: 342}
+- {from: '03:33:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.448534, lng: 107.431213, speed: 60, direction: 329}
+- {from: '03:34:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.4449, lng: 107.428559, speed: 60, direction: 322}
+- {from: '03:34:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.440977, lng: 107.426379, speed: 60, direction: 339}
+- {from: '03:35:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.436652, lng: 107.42517, speed: 60, direction: 349}
+- {from: '03:35:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.432192, lng: 107.42463, speed: 60, direction: 354}
+- {from: '03:36:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.427716, lng: 107.424775, speed: 60, direction: 6}
+- {from: '03:36:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.423314, lng: 107.424177, speed: 60, direction: 331}
+- {from: '03:37:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.420575, lng: 107.420629, speed: 60, direction: 310}
+- {from: '03:37:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.417448, lng: 107.417389, speed: 60, direction: 319}
+- {from: '03:38:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.413842, lng: 107.414702, speed: 60, direction: 330}
+- {from: '03:38:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.409774, lng: 107.412796, speed: 60, direction: 340}
+- {from: '03:39:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.405477, lng: 107.411469, speed: 60, direction: 343}
+- {from: '03:39:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.401287, lng: 107.409848, speed: 60, direction: 334}
+- {from: '03:40:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.397495, lng: 107.407434, speed: 60, direction: 322}
+- {from: '03:40:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.394247, lng: 107.404319, speed: 60, direction: 310}
+- {from: '03:41:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.391681, lng: 107.400614, speed: 60, direction: 300}
+- {from: '03:41:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.389462, lng: 107.396681, speed: 60, direction: 300}
+- {from: '03:42:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.387221, lng: 107.392759, speed: 60, direction: 300}
+- {from: '03:42:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.384991, lng: 107.388832, speed: 60, direction: 300}
+- {from: '03:43:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.382764, lng: 107.384903, speed: 60, direction: 300}
+- {from: '03:43:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.380537, lng: 107.380974, speed: 60, direction: 300}
+- {from: '03:44:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.378309, lng: 107.377045, speed: 60, direction: 300}
+- {from: '03:44:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.37608, lng: 107.373117, speed: 60, direction: 300}
+- {from: '03:45:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.373851, lng: 107.369188, speed: 60, direction: 300}
+- {from: '03:45:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.371623, lng: 107.36526, speed: 60, direction: 300}
+- {from: '03:46:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.369426, lng: 107.361314, speed: 60, direction: 300}
+- {from: '03:46:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.367166, lng: 107.357404, speed: 60, direction: 300}
+- {from: '03:47:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.364924, lng: 107.353483, speed: 60, direction: 300}
+- {from: '03:47:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.362701, lng: 107.349552, speed: 60, direction: 299}
+- {from: '03:48:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.360577, lng: 107.345565, speed: 60, direction: 298}
+- {from: '03:48:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.358684, lng: 107.341464, speed: 60, direction: 294}
+- {from: '03:49:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.356978, lng: 107.33728, speed: 60, direction: 290}
+- {from: '03:49:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.355489, lng: 107.333013, speed: 60, direction: 289}
+- {from: '03:50:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.354169, lng: 107.32869, speed: 60, direction: 285}
+- {from: '03:50:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.353088, lng: 107.324301, speed: 60, direction: 281}
+- {from: '03:51:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.352257, lng: 107.319856, speed: 60, direction: 280}
+- {from: '03:51:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.351626, lng: 107.315378, speed: 60, direction: 277}
+- {from: '03:52:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.351225, lng: 107.310874, speed: 60, direction: 274}
+- {from: '03:52:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.35098, lng: 107.306358, speed: 60, direction: 273}
+- {from: '03:53:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350736, lng: 107.301841, speed: 60, direction: 273}
+- {from: '03:53:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350504, lng: 107.297324, speed: 60, direction: 273}
+- {from: '03:54:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350266, lng: 107.292807, speed: 60, direction: 273}
+- {from: '03:54:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350039, lng: 107.28829, speed: 60, direction: 273}
+- {from: '03:55:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.349816, lng: 107.283773, speed: 60, direction: 273}
+- {from: '03:55:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.349558, lng: 107.279257, speed: 60, direction: 273}
+- {from: '03:56:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.349306, lng: 107.274741, speed: 60, direction: 274}
+- {from: '03:56:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.349035, lng: 107.270226, speed: 60, direction: 273}
+- {from: '03:57:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.348833, lng: 107.265708, speed: 60, direction: 274}
+- {from: '03:57:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.348639, lng: 107.261192, speed: 60, direction: 268}
+- {from: '03:58:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.349065, lng: 107.256693, speed: 60, direction: 257}
+- {from: '03:58:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350246, lng: 107.252333, speed: 60, direction: 251}
+- {from: '03:59:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.351991, lng: 107.248167, speed: 60, direction: 246}
+- {from: '03:59:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.353746, lng: 107.244005, speed: 60, direction: 249}
+- {from: '04:00:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.354804, lng: 107.239614, speed: 60, direction: 261}
+- {from: '04:00:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.355144, lng: 107.235111, speed: 60, direction: 271}
+- {from: '04:01:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.354764, lng: 107.230611, speed: 60, direction: 281}
+- {from: '04:01:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.353844, lng: 107.226184, speed: 60, direction: 282}
+- {from: '04:02:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.352914, lng: 107.221759, speed: 60, direction: 282}
+- {from: '04:02:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.351984, lng: 107.217333, speed: 60, direction: 282}
+- {from: '04:03:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.35107, lng: 107.212905, speed: 60, direction: 282}
+- {from: '04:03:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.350074, lng: 107.208497, speed: 60, direction: 287}
+- {from: '04:04:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.348425, lng: 107.204296, speed: 60, direction: 297}
+- {from: '04:04:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.346115, lng: 107.200423, speed: 60, direction: 305}
+- {from: '04:05:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.343277, lng: 107.196918, speed: 60, direction: 310}
+- {from: '04:05:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.340425, lng: 107.193426, speed: 60, direction: 306}
+- {from: '04:06:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.338111, lng: 107.189555, speed: 60, direction: 295}
+- {from: '04:06:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.336425, lng: 107.185367, speed: 60, direction: 289}
+- {from: '04:07:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.334926, lng: 107.181103, speed: 60, direction: 290}
+- {from: '04:07:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.333392, lng: 107.176852, speed: 60, direction: 290}
+- {from: '04:08:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.331872, lng: 107.172595, speed: 60, direction: 289}
+- {from: '04:08:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.330318, lng: 107.168352, speed: 60, direction: 291}
+- {from: '04:09:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.328573, lng: 107.164184, speed: 60, direction: 294}
+- {from: '04:09:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.326653, lng: 107.160097, speed: 60, direction: 297}
+- {from: '04:10:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.324508, lng: 107.156124, speed: 60, direction: 300}
+- {from: '04:10:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.32223, lng: 107.152224, speed: 60, direction: 301}
+- {from: '04:11:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.319957, lng: 107.148322, speed: 60, direction: 300}
+- {from: '04:11:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.31769, lng: 107.144417, speed: 60, direction: 301}
+- {from: '04:12:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.315423, lng: 107.140511, speed: 60, direction: 300}
+- {from: '04:12:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.31316, lng: 107.136603, speed: 60, direction: 300}
+- {from: '04:13:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.310904, lng: 107.132691, speed: 60, direction: 300}
+- {from: '04:13:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.308653, lng: 107.128777, speed: 60, direction: 300}
+- {from: '04:14:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.306402, lng: 107.124862, speed: 60, direction: 300}
+- {from: '04:14:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.304112, lng: 107.12097, speed: 60, direction: 301}
+- {from: '04:15:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.30182, lng: 107.11708, speed: 60, direction: 299}
+- {from: '04:15:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.299573, lng: 107.113163, speed: 60, direction: 300}
+- {from: '04:16:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.297325, lng: 107.109246, speed: 60, direction: 300}
+- {from: '04:16:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.295078, lng: 107.105329, speed: 60, direction: 300}
+- {from: '04:17:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.292938, lng: 107.101353, speed: 60, direction: 296}
+- {from: '04:17:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.291034, lng: 107.097257, speed: 60, direction: 294}
+- {from: '04:18:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.289266, lng: 107.0931, speed: 60, direction: 291}
+- {from: '04:18:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.287721, lng: 107.088854, speed: 60, direction: 288}
+- {from: '04:19:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.286346, lng: 107.084548, speed: 60, direction: 287}
+- {from: '04:19:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.285003, lng: 107.080232, speed: 60, direction: 287}
+- {from: '04:20:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.28368, lng: 107.07591, speed: 60, direction: 287}
+- {from: '04:20:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.282338, lng: 107.071594, speed: 60, direction: 287}
+- {from: '04:21:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.280997, lng: 107.067277, speed: 60, direction: 287}
+- {from: '04:21:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.279658, lng: 107.06296, speed: 60, direction: 287}
+- {from: '04:22:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.278335, lng: 107.058638, speed: 60, direction: 289}
+- {from: '04:22:30', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.276883, lng: 107.054358, speed: 60, direction: 289}
+- {from: '04:23:00', packet: location, batch: offline, sent_at: '04:24:00', lat: -6.27521, lng: 107.050161, speed: 60, direction: 294}
+- {from: '04:23:30', step_name: buffer_end, packet: location, batch: offline, sent_at: '04:24:00', lat: -6.273409, lng: 107.046018, speed: 60, direction: 294}
+- {from: '04:24:00', packet: location, lat: -6.271607, lng: 107.041875, speed: 60, direction: 294}
+- {from: '04:24:10', packet: location, lat: -6.271062, lng: 107.040471, speed: 60, direction: 290}
+- {from: '04:24:20', packet: location, lat: -6.270553, lng: 107.039054, speed: 60, direction: 290}
+- {from: '04:24:30', packet: location, lat: -6.270044, lng: 107.037636, speed: 60, direction: 290}
+- {from: '04:24:40', packet: location, lat: -6.269534, lng: 107.036218, speed: 60, direction: 290}
+- {from: '04:24:50', packet: location, lat: -6.269026, lng: 107.0348, speed: 60, direction: 290}
+- {from: '04:25:00', packet: location, lat: -6.26852, lng: 107.033381, speed: 60, direction: 290}
+- {from: '04:25:10', packet: location, lat: -6.268014, lng: 107.031962, speed: 60, direction: 290}
+- {from: '04:25:20', packet: location, lat: -6.267508, lng: 107.030544, speed: 60, direction: 290}
+- {from: '04:25:30', packet: location, lat: -6.267003, lng: 107.029124, speed: 60, direction: 289}
+- {from: '04:25:40', packet: location, lat: -6.266512, lng: 107.0277, speed: 60, direction: 289}
+- {from: '04:25:50', packet: location, lat: -6.266021, lng: 107.026276, speed: 60, direction: 289}
+- {from: '04:26:00', packet: location, lat: -6.26553, lng: 107.024852, speed: 60, direction: 289}
+- {from: '04:26:10', packet: location, lat: -6.265038, lng: 107.023427, speed: 60, direction: 289}
+- {from: '04:26:20', packet: location, lat: -6.264547, lng: 107.022003, speed: 60, direction: 289}
+- {from: '04:26:30', packet: location, lat: -6.264056, lng: 107.020579, speed: 60, direction: 289}
+- {from: '04:26:40', packet: location, lat: -6.263565, lng: 107.019155, speed: 60, direction: 289}
+- {from: '04:26:50', packet: location, lat: -6.263073, lng: 107.017731, speed: 60, direction: 289}
+- {from: '04:27:00', packet: location, lat: -6.262582, lng: 107.016307, speed: 60, direction: 289}
+- {from: '04:27:10', packet: location, lat: -6.26213, lng: 107.014879, speed: 60, direction: 262}
+- {from: '04:27:20', packet: location, lat: -6.263031, lng: 107.014784, speed: 60, direction: 108}
+- {from: '04:27:30', packet: location, lat: -6.263506, lng: 107.016213, speed: 60, direction: 111}
+- {from: '04:27:40', packet: location, lat: -6.263432, lng: 107.017462, speed: 60, direction: 36}
+- {from: '04:27:50', packet: location, lat: -6.262145, lng: 107.018226, speed: 60, direction: 25}
+- {from: '04:28:00', packet: location, lat: -6.260899, lng: 107.018841, speed: 60, direction: 288}
+- {from: '04:28:10', packet: location, lat: -6.260469, lng: 107.0174, speed: 60, direction: 293}
+- {from: '04:28:20', packet: location, lat: -6.25995, lng: 107.015986, speed: 60, direction: 289}
+- {from: '04:28:30', packet: location, lat: -6.259429, lng: 107.014573, speed: 60, direction: 290}
+- {from: '04:28:40', packet: location, lat: -6.258891, lng: 107.013166, speed: 60, direction: 289}
+- {from: '04:28:50', packet: location, lat: -6.258388, lng: 107.011746, speed: 60, direction: 290}
+- {from: '04:29:00', packet: location, lat: -6.257887, lng: 107.010326, speed: 60, direction: 289}
+- {from: '04:29:10', packet: location, lat: -6.257389, lng: 107.008904, speed: 60, direction: 289}
+- {from: '04:29:20', packet: location, lat: -6.25689, lng: 107.007482, speed: 60, direction: 289}
+- {from: '04:29:30', packet: location, lat: -6.256396, lng: 107.006059, speed: 60, direction: 289}
+- {from: '04:29:40', packet: location, lat: -6.257097, lng: 107.004975, speed: 60, direction: 220}
+- {from: '04:29:50', packet: location, lat: -6.258266, lng: 107.004032, speed: 60, direction: 218}
+- {from: '04:30:00', packet: location, lat: -6.259445, lng: 107.003102, speed: 60, direction: 218}
+- {from: '04:30:10', packet: location, lat: -6.260603, lng: 107.002145, speed: 60, direction: 223}
+- {from: '04:30:20', packet: location, lat: -6.261506, lng: 107.000957, speed: 60, direction: 244}
+- {from: '04:30:30', packet: location, lat: -6.260753, lng: 107.001871, speed: 60, direction: 46}
+- {from: '04:30:40', packet: location, lat: -6.259789, lng: 107.001662, speed: 60, direction: 227}
+- {from: '04:30:50', packet: location, lat: -6.260433, lng: 107.000505, speed: 60, direction: 324}
+- {from: '04:31:00', step_name: drive_end, packet: location, lat: -6.259911, lng: 107.000123, speed: 60, direction: 324}
+- {from: '04:31:10', to: '04:51:10', every: '00:05:00', step_name: buffer_park_end, packet: location, speed: 0, acc: false}

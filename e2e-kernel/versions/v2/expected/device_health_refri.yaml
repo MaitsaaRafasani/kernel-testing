@@ -1,0 +1,40 @@
+# Expected v2 usecase device_health_refri (sheet expected_v2).
+# Edit lewat Excel: python cli.py yaml2excel --usecase device_health_refri -> edit cases/excel/device_health_refri.xlsx
+#                   -> python cli.py excel2yaml --usecase device_health_refri -> hapus xlsx (tidak masuk git)
+
+device_health_refri:
+  default:
+    steps:
+      end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {last_packet: $step_at}, timeout: '00:10:00', note: tunggu kernel selesai memproses data terakhir}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, start_time: {between: ['H1 00:20:00', 'H5 00:00:00']}}, count: 29, note: jumlah semua summary device health sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 00:59:50', end_time: 'H1 01:30:00'}, count: 1, note: 'dibuat H1 01:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 03:00:00', end_time: 'H1 03:12:00'}, count: 1, note: 'dibuat H1 03:12:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 03:12:00', end_time: 'H1 03:24:00'}, count: 1, note: 'dibuat H1 03:24:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 03:24:00', end_time: 'H1 03:36:00'}, count: 1, note: 'dibuat H1 03:36:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 03:36:00', end_time: 'H1 03:48:00'}, count: 1, note: 'dibuat H1 03:48:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 03:48:00', end_time: 'H1 04:00:00'}, count: 1, note: 'dibuat H1 04:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 04:59:50', end_time: 'H1 05:30:00'}, count: 1, note: 'dibuat H1 05:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H1 04:59:50', end_time: 'H1 05:30:00'}, count: 1, note: 'dibuat H1 05:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 06:12:50', end_time: 'H1 07:00:00'}, count: 1, note: 'dibuat H1 07:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 10:45:00', end_time: 'H1 11:00:00'}, count: 1, note: 'dibuat H1 11:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 12:12:50', end_time: 'H1 13:30:00'}, count: 1, note: 'dibuat H1 13:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator data lost, start_time: 'H1 14:42:40', end_time: 'H1 14:59:50'}, count: 1, note: 'dibuat H1 15:10:50'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 14:59:50', end_time: 'H1 15:30:00'}, count: 1, note: 'dibuat H1 15:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 15:30:00', end_time: 'H1 16:00:00'}, count: 1, note: 'dibuat H1 16:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H1 16:59:50', end_time: 'H1 17:30:00'}, count: 1, note: 'dibuat H1 17:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 17:30:00', end_time: 'H1 18:00:00'}, count: 1, note: 'dibuat H1 18:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H1 21:15:00', end_time: 'H1 22:00:00'}, count: 1, note: 'dibuat H1 22:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H1 23:35:00', end_time: 'H2 00:30:00'}, count: 1, note: 'dibuat H2 00:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator off, start_time: 'H2 05:13:30', end_time: 'H2 06:30:00'}, count: 1, note: 'dibuat H2 06:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator data lost, start_time: 'H2 07:43:00', end_time: 'H2 07:59:50'}, count: 1, note: 'dibuat H2 08:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H2 07:59:50', end_time: 'H2 08:30:00'}, count: 1, note: 'dibuat H2 08:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H2 07:59:50', end_time: 'H2 08:30:00'}, count: 1, note: 'dibuat H2 08:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H2 08:30:00', end_time: 'H2 08:40:00'}, count: 1, note: 'dibuat H2 08:40:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator on, start_time: 'H2 13:12:30', end_time: 'H2 17:00:00'}, count: 1, note: 'dibuat H2 17:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-02, description: refrigerator data lost, start_time: 'H2 18:13:00', end_time: 'H2 18:24:50'}, count: 1, note: 'dibuat H2 18:35:50'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H2 18:24:50', end_time: 'H2 18:55:00'}, count: 1, note: 'dibuat H2 18:55:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: REFRI-01, start_time: 'H2 20:25:00', end_time: 'H2 23:30:00'}, count: 1, note: 'dibuat H2 23:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 04:59:50', end_time: 'H1 05:30:00'}, count: 1, note: 'D: device offline (summary tambahan offline)'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H2 07:59:50', end_time: 'H2 08:30:00'}, count: 1, note: 'Q: device offline (summary tambahan offline)'}

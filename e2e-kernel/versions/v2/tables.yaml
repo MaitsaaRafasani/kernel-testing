@@ -1,0 +1,32 @@
+# Anti false-pass: saat cek DB, runner menambah syarat `<time> >= acuan` supaya data run lama tidak ikut terbaca.
+# Baris terbaru (ORDER BY time DESC) yang dicek untuk `match`.
+#   since: sent  -> kolom waktu server, acuan = saat step dikirim (dikurangi env timeout.clock_skew)
+#   since: start -> kolom waktu paket, acuan = awal timeline (00:00:00)
+# Tabel tanpa `time`: tidak ada syarat waktu (pakai nilai unik per run, mis. port_gate: random).
+
+vehicle_status:
+  time: last_receive            # diisi offline_device dengan waktu server tiap paket
+  since: sent
+device_log:
+  time: message_on              # online command reply: received_on (waktu server)
+  since: sent
+summary_trip:
+  time: stop_time               # waktu paket gerakan terakhir
+  since: start
+raw_location:
+  time: sent_on                 # waktu paket (buffer: waktu record asli)
+  since: start
+raw_alert:
+  time: created_on              # waktu alert (overspeed: awal overspeed + 60 detik)
+  since: start
+summary_device_error:
+  time: start_time              # device health: waktu paket awal error (summary dari data lama tidak ikut)
+  since: start
+device_health:
+  time: last_device_online      # = vehicle_status.last_receive (waktu server), ditulis consumer tiap ~5 detik
+  since: sent
+raw_sensor_info:
+  time: created_on              # waktu paket sensor terakhir (temperature)
+  since: start
+device: {}                      # tidak ada kolom waktu
+sensor: {}                      # setting sensor (mac_address queclink), tidak ada kolom waktu

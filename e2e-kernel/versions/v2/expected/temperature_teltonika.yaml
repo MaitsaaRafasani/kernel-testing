@@ -1,0 +1,348 @@
+# Expected v2 usecase temperature_teltonika (sheet expected_v2).
+# Dibuat oleh generators/temperature_teltonika.py: ubah generatornya lalu python cli.py generate --usecase temperature_teltonika
+# (bukan edit YAML / Excel, generate ulang menimpa file ini)
+
+temperature_teltonika:
+  default:
+    steps:
+      cek_h1_000000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H1 00:00:00'}, count: 1, match: {alert_flag: false, alert_data: '-10.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 normal, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 00:00:00'}, count: 1, match: {alert_flag: false, alert_data: '3.8'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H1 00:00:00'}, count: 1, match: {alert_flag: false, alert_data: '28.8'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 normal, disimpan hanya saat status berubah'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -10.2, tolerance: 0.05}, {approx: 3.8, tolerance: 0.05}, {approx: 28.8, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 00:00:00'}, count: 1, match: {temperature: {approx: -10.2, tolerance: 0.05}, temperature2: {approx: 3.8, tolerance: 0.05}, temperature3: {approx: 28.8, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h1_010000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H1 01:00:00'}, count: 1, match: {alert_flag: true, alert_data: '-14.0', alert_trigger: -15}, note: 'TEMPERATURE_1 (18) hi jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 01:00:00'}, count: 1, match: {temperature: {approx: -14.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: {approx: 29.0, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_010510:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H1 01:05:10'}, count: 1, match: {alert_flag: true, alert_data: '-13.8', alert_trigger: -15}, note: 'TEMPERATURE_1 (18) hi jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 01:05:10'}, count: 1, match: {temperature: {approx: -13.8, tolerance: 0.05}, temperature2: {approx: 4.2, tolerance: 0.05}, temperature3: {approx: 29.2, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_013000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H1 01:30:00'}, count: 1, match: {alert_flag: true, alert_data: '-26.0', alert_trigger: -25}, note: 'TEMPERATURE_1 (18) lo jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 01:30:00'}, count: 1, match: {temperature: {approx: -26.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: {approx: 29.0, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_014500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 17, created_on: 'H1 01:45:00'}, count: 1, match: {alert_flag: true, alert_data: '-1.0', alert_trigger: 0}, known_bug: alert_lo 0 diabaikan (if alert_lo and ...), note: 'TEMPERATURE_2 (17) lo jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 01:45:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: -1.0, tolerance: 0.05}, temperature3: {approx: 29.0, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_020800:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 17, created_on: 'H1 02:08:00'}, count: 1, match: {alert_flag: false, alert_data: '11.1', alert_trigger: 10}, note: 'TEMPERATURE_2 (17) idle hi tidak jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 02:08:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 11.1, tolerance: 0.05}, temperature3: {approx: 29.1, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_023000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H1 02:30:00'}, count: 1, match: {alert_flag: true, alert_data: '3000'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 error, disimpan hanya saat status berubah'}
+      cek_h1_024000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 02:40:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h1_024050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-02}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)}
+      cek_h1_025000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H1 02:50:00'}, count: 1, match: {alert_flag: false, alert_data: '29.0'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 normal, disimpan hanya saat status berubah'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, {approx: 29.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 02:50:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: {approx: 29.0, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-02 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h1_030000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:00:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+      cek_h1_030010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:00:10'}, count: 1, match: {alert_flag: false, alert_data: '4.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+      cek_h1_030500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:05:00'}, count: 1, match: {alert_flag: true, alert_data: '2000'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+      cek_h1_030510:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:05:10'}, count: 1, match: {alert_flag: false, alert_data: '4.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+      cek_h1_031000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:10:00'}, count: 1, match: {alert_flag: true, alert_data: '4000'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+      cek_h1_031010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:10:10'}, count: 1, match: {alert_flag: false, alert_data: '4.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+      cek_h1_031500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:15:00'}, count: 1, match: {alert_flag: true, alert_data: '5000'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+      cek_h1_031510:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H1 03:15:10'}, count: 1, match: {alert_flag: false, alert_data: '4.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+      cek_h1_034000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H1 03:40:00'}, count: 1, match: {alert_flag: true, alert_data: '-127'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 error, disimpan hanya saat status berubah'}
+      cek_h1_034010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H1 03:40:10'}, count: 1, match: {alert_flag: false, alert_data: '-17.8'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 normal, disimpan hanya saat status berubah'}
+      cek_h1_035000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, {approx: 125.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+      cek_h1_035010:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.8, tolerance: 0.05}, {approx: 4.2, tolerance: 0.05}, {approx: 125.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+      cek_h1_035020:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.1, tolerance: 0.05}, {approx: 3.9, tolerance: 0.05}, {approx: -55.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+      cek_h1_035030:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: -55.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+      cek_h1_035500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H1 03:55:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 error, disimpan hanya saat status berubah'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, {approx: 28.8, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+      cek_h1_035510:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H1 03:55:10'}, count: 1, match: {alert_flag: false, alert_data: '29.2'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 normal, disimpan hanya saat status berubah'}
+      cek_h1_051500:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-03}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-03; status device health temperature di akhir pesan (null = normal)}
+      cek_h1_053000:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-03 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h1_060000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H1 06:00:00'}, count: 1, match: {alert_flag: false, alert_data: '-11.2', alert_trigger: -12}, note: 'TEMPERATURE_1 (18) idle hi tidak jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 06:00:00'}, count: 1, match: {temperature: {approx: -11.2, tolerance: 0.05}, temperature2: {approx: 3.8, tolerance: 0.05}, temperature3: {approx: 25.8, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h1_234000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [null, {approx: 4.2, tolerance: 0.05}, {approx: 26.2, tolerance: 0.05}]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 1 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H1 23:40:00'}, count: 1, match: {temperature: null, temperature2: {approx: 4.2, tolerance: 0.05}, temperature3: {approx: 26.2, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_001500:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: null, temperature_3_error_status: TEMP-03}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-03; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_003000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.8, tolerance: 0.05}, {approx: 4.2, tolerance: 0.05}, {approx: 24.5, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 00:30:00'}, count: 1, match: {temperature: {approx: -17.8, tolerance: 0.05}, temperature2: {approx: 4.2, tolerance: 0.05}, temperature3: {approx: 24.5, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-03}, timeout: '00:01:00', note: temperature-1 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_060000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H2 06:00:00'}, count: 1, match: {alert_flag: false, alert_data: '-11.1', alert_trigger: -12}, known_bug: 'jeda alert pakai timedelta.seconds: jeda 1 hari + x dihitung x detik', note: 'TEMPERATURE_1 (18) idle hi tidak jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 06:00:00'}, count: 1, match: {temperature: {approx: -11.1, tolerance: 0.05}, temperature2: {approx: 3.9, tolerance: 0.05}, temperature3: {approx: 27.9, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-03 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_061000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18, created_on: 'H2 06:10:00'}, count: 1, match: {alert_flag: false, alert_data: '-11.2', alert_trigger: -12}, note: 'TEMPERATURE_1 (18) idle hi tidak jalan, alert_trigger = batas'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 06:10:00'}, count: 1, match: {temperature: {approx: -11.2, tolerance: 0.05}, temperature2: {approx: 3.8, tolerance: 0.05}, temperature3: {approx: 27.8, tolerance: 0.05}}, note: baris raw_sensor_info saat alert (insert_by_pass)}
+      cek_h2_071000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [null, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 1 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 07:10:00'}, count: 1, match: {temperature: null, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_071050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_073000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 07:30:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_080000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H2 08:00:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+      cek_h2_081000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, null, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 2 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 08:10:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: null, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_081050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: TEMP-02, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-2 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_083000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H2 08:30:00'}, count: 1, match: {alert_flag: false, alert_data: '4.1'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 08:30:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-2 TEMP-02 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_091000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [null, {approx: 3.5, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 1 NULL, wire 3 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 09:10:00'}, count: 1, match: {temperature: null, temperature2: {approx: 3.5, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_091050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_091100:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: TEMP-03, temperature_3_error_status: TEMP-02}, timeout: '00:01:00', note: 'temperature-2 normal -> TEMP-03, temperature-3 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)'}
+      cek_h2_092950:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: {between: ['H2 09:00:00', 'H2 09:29:50']}}, count: 180, note: DALLAS_TEMPERATURE_STATUS wire 3 flag true / false bergantian tiap paket (error / bukan error)}
+      cek_h2_093000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 09:30:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: 'temperature-1 TEMP-01 -> normal, temperature-2 TEMP-03 -> normal, temperature-3 TEMP-02 -> normal; status device health temperature di akhir pesan (null = normal)'}
+      cek_h2_101000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 10:10:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_101050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_103000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 10:30:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_111010:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.2, tolerance: 0.05}, {approx: 3.8, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+      cek_h2_111100:
+        db:
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:11:00'}, count: 1, match: {temperature: {approx: -18.2, tolerance: 0.05}, temperature2: {approx: 3.8, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_111200:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, {approx: 28.0, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:12:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: {approx: 28.0, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_112210:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.8, tolerance: 0.05}, {approx: 4.2, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+      cek_h2_112300:
+        db:
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:23:00'}, count: 1, match: {temperature: {approx: -17.8, tolerance: 0.05}, temperature2: {approx: 4.2, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_112400:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.1, tolerance: 0.05}, {approx: 3.9, tolerance: 0.05}, {approx: 27.9, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:24:00'}, count: 1, match: {temperature: {approx: -18.1, tolerance: 0.05}, temperature2: {approx: 3.9, tolerance: 0.05}, temperature3: {approx: 27.9, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_113410:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+      cek_h2_113500:
+        db:
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:35:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_113600:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.2, tolerance: 0.05}, {approx: 3.8, tolerance: 0.05}, {approx: 27.8, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:36:00'}, count: 1, match: {temperature: {approx: -18.2, tolerance: 0.05}, temperature2: {approx: 3.8, tolerance: 0.05}, temperature3: {approx: 27.8, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_114610:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.0, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+      cek_h2_114700:
+        db:
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:47:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: 4.0, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_114800:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.8, tolerance: 0.05}, {approx: 4.2, tolerance: 0.05}, {approx: 28.2, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:48:00'}, count: 1, match: {temperature: {approx: -17.8, tolerance: 0.05}, temperature2: {approx: 4.2, tolerance: 0.05}, temperature3: {approx: 28.2, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_115810:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.1, tolerance: 0.05}, {approx: 3.9, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+      cek_h2_115900:
+        db:
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 11:59:00'}, count: 1, match: {temperature: {approx: -18.1, tolerance: 0.05}, temperature2: {approx: 3.9, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_120000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 12:00:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_121500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H2 12:15:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 error, disimpan hanya saat status berubah'}
+      cek_h2_122500:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, null]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 3 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 12:25:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: null}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_122550:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-02}, timeout: '00:01:00', note: temperature-3 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_123000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H2 12:30:00'}, count: 1, match: {alert_flag: false, alert_data: '150.0'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 normal, disimpan hanya saat status berubah'}
+      cek_h2_124050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: TEMP-01}, timeout: '00:01:00', note: temperature-3 TEMP-02 -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_124500:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 12:45:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-3 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_130000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H2 13:00:00'}, count: 1, match: {alert_flag: true, alert_data: '-127'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 error, disimpan hanya saat status berubah'}
+      cek_h2_131000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [null, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 1 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 13:10:00'}, count: 1, match: {temperature: null, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_131050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-02, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_133000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H2 13:30:00'}, count: 1, match: {alert_flag: false, alert_data: '-17.9'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 normal, disimpan hanya saat status berubah'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -17.9, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 13:30:00'}, count: 1, match: {temperature: {approx: -17.9, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 TEMP-02 -> normal; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_134500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H2 13:45:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 error, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H2 13:45:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 error, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H2 13:45:00'}, count: 1, match: {alert_flag: true, alert_data: '850'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 error, disimpan hanya saat status berubah'}
+      cek_h2_135550:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-02, temperature_2_error_status: TEMP-02, temperature_3_error_status: TEMP-02}, timeout: '00:01:00', note: 'temperature-1 normal -> TEMP-02, temperature-2 normal -> TEMP-02, temperature-3 normal -> TEMP-02; status device health temperature di akhir pesan (null = normal)'}
+      cek_h2_141500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 11, created_on: 'H2 14:15:00'}, count: 1, match: {alert_flag: false, alert_data: '-17.9'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 1 normal, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 12, created_on: 'H2 14:15:00'}, count: 1, match: {alert_flag: false, alert_data: '4.1'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 2 normal, disimpan hanya saat status berubah'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76, alert_trigger: 13, created_on: 'H2 14:15:00'}, count: 1, match: {alert_flag: false, alert_data: '28.1'}, note: 'DALLAS_TEMPERATURE_STATUS (76) wire 3 normal, disimpan hanya saat status berubah'}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: 'temperature-1 TEMP-02 -> normal, temperature-2 TEMP-02 -> normal, temperature-3 TEMP-02 -> normal; status device health temperature di akhir pesan (null = normal)'}
+      cek_h2_144000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [null, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: 'temperature wire 1-3 setelah pesan: wire 1 NULL (reset > 10 menit tanpa data)'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 14:40:00'}, count: 1, match: {temperature: null, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+      cek_h2_144050:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: TEMP-01, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 normal -> TEMP-01; status device health temperature di akhir pesan (null = normal)}
+      cek_h2_150000:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {temperature: [{approx: -18.0, tolerance: 0.05}, {approx: 4.1, tolerance: 0.05}, {approx: 28.1, tolerance: 0.05}]}, timeout: '00:01:00', note: temperature wire 1-3 setelah pesan}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: 'H2 15:00:00'}, count: 1, match: {temperature: {approx: -18.0, tolerance: 0.05}, temperature2: {approx: 4.1, tolerance: 0.05}, temperature3: {approx: 28.1, tolerance: 0.05}}, note: baris raw_sensor_info (NULL = wire di-reset)}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: temperature-1 TEMP-01 -> normal; status device health temperature di akhir pesan (null = normal)}
+      end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {last_packet: $step_at}, timeout: '00:10:00', note: tunggu kernel selesai memproses data terakhir}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 18}, count: 6, known_bug: 'alert temperature, lihat cek per alert', note: jumlah TEMPERATURE_1 (18)}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 17}, count: 2, known_bug: 'alert temperature, lihat cek per alert', note: jumlah TEMPERATURE_2 (17)}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 26}, count: 0, note: jumlah TEMPERATURE_3 (26)}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 76}, count: 209, note: jumlah DALLAS_TEMPERATURE_STATUS (76)}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id}, count: 1057, note: 'jumlah baris: pertama, berubah >= 60 detik, >= 300 detik, atau ada alert'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: {between: ['H1 00:30:00', 'H1 00:59:59']}}, count: 30, note: 'jalan 00:30-01:00, suhu berubah tiap paket: 1 baris tiap >= 60 detik'}
+        - {table: raw_sensor_info, where: {vehicle_id: $vehicle_id, created_on: {between: ['H1 05:00:00', 'H1 05:59:59']}}, count: 12, note: 'parkir 05:00-06:00, paket tiap 5 menit: tiap paket 1 baris (>= 300 detik)'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id}, count: 24, note: jumlah semua summary device health sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-3, start_time: 'H1 02:29:50', end_time: 'H1 02:50:00'}, count: 1, note: 'dibuat H1 02:50:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H1 03:59:50', end_time: 'H1 04:13:00'}, count: 1, note: 'dibuat H1 04:13:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-2, start_time: 'H1 03:59:50', end_time: 'H1 04:13:00'}, count: 1, note: 'dibuat H1 04:13:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H1 03:59:50', end_time: 'H1 04:13:00'}, count: 1, note: 'dibuat H1 04:13:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-03, description: temperature-3, start_time: 'H1 05:00:00', end_time: 'H1 05:30:00'}, count: 1, note: 'dibuat H1 05:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H1 23:25:00', end_time: 'H2 00:30:00'}, count: 1, note: 'dibuat H2 00:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-03, description: temperature-3, start_time: 'H2 00:00:00', end_time: 'H2 06:00:00'}, count: 1, note: 'dibuat H2 06:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H2 06:59:50', end_time: 'H2 07:30:00'}, count: 1, note: 'dibuat H2 07:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-2, start_time: 'H2 07:59:50', end_time: 'H2 08:30:00'}, count: 1, note: 'dibuat H2 08:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H2 08:59:50', end_time: 'H2 09:30:00'}, count: 1, note: 'dibuat H2 09:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-3, start_time: 'H2 08:59:50', end_time: 'H2 09:30:00'}, count: 1, note: 'dibuat H2 09:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-03, description: temperature-2, start_time: 'H2 09:00:00', end_time: 'H2 09:30:00'}, count: 1, note: 'dibuat H2 09:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 09:59:50', end_time: 'H2 10:30:00'}, count: 1, note: 'dibuat H2 10:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 11:00:00', end_time: 'H2 11:12:00'}, count: 1, note: 'dibuat H2 11:12:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 11:12:00', end_time: 'H2 11:24:00'}, count: 1, note: 'dibuat H2 11:24:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 11:24:00', end_time: 'H2 11:36:00'}, count: 1, note: 'dibuat H2 11:36:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 11:36:00', end_time: 'H2 11:48:00'}, count: 1, note: 'dibuat H2 11:48:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 11:48:00', end_time: 'H2 12:00:00'}, count: 1, note: 'dibuat H2 12:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-3, start_time: 'H2 12:29:50', end_time: 'H2 12:45:00'}, count: 1, note: 'dibuat H2 12:45:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-1, start_time: 'H2 12:59:50', end_time: 'H2 13:30:00'}, count: 1, note: 'dibuat H2 13:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-1, start_time: 'H2 13:44:50', end_time: 'H2 14:15:00'}, count: 1, note: 'dibuat H2 14:15:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-2, start_time: 'H2 13:44:50', end_time: 'H2 14:15:00'}, count: 1, note: 'dibuat H2 14:15:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-02, description: temperature-3, start_time: 'H2 13:44:50', end_time: 'H2 14:15:00'}, count: 1, note: 'dibuat H2 14:15:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: TEMP-01, description: temperature-1, start_time: 'H2 14:29:50', end_time: 'H2 15:00:00'}, count: 1, note: 'dibuat H2 15:00:00'}
+        - {table: device_health, where: {imei: $imei}, match: {temperature_1_error_status: null, temperature_2_error_status: null, temperature_3_error_status: null}, timeout: '00:01:00', note: status device health temperature di akhir pesan (null = normal)}

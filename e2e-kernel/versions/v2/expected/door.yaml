@@ -1,0 +1,341 @@
+# Expected v2 usecase door (sheet expected_v2).
+# Dibuat oleh generators/door.py: ubah generatornya lalu python cli.py generate --usecase door
+# (bukan edit YAML / Excel, generate ulang menimpa file ini)
+
+door:
+  default:
+    steps:
+      cek_h1_000010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 00:00:00'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H1 00:00:00'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 00:00:00', door2_status: 1, last_door2_alert: 'H1 00:00:00'}, note: 'door1 closed, door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_003345:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 00:31:20'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 00:31:20'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_003500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H1 00:33:45'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H1 00:33:45'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_004500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 00:42:40'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 00:42:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_005500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H1 00:52:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H1 00:52:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_010530:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H1 01:05:21', 'H1 01:05:23']}}, count: 0, note: 'glitch door1 01:05:21 -> 01:05:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 00:42:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_011240:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H1 01:12:28', 'H1 01:12:31']}}, count: 0, note: 'glitch door1 01:12:28 -> 01:12:31 (3 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 00:42:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_013016:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 01:30:12'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 01:30:12'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_013020:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 01:30:16'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 01:30:16'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: DOOR-03, door_2_error_status: null}, timeout: '00:01:00', note: door-1 normal -> DOOR-03; status device health door di akhir pesan (null = normal)}
+      cek_h1_014500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 01:42:30'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 01:42:30'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_015740:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 35, alert_trigger: 4, created_on: 'H1 01:57:40'}, count: 1, match: {alert_data: 15}, note: 'DOOR_OPEN_TOO_LONG (35) door1, alert_data = alert_min_time 15 menit'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 01:42:30'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_020000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H1 01:57:40'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H1 01:57:40'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_021500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H1 02:10:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H1 02:10:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_022500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 02:21:50'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 02:21:50'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_023410:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-1 DOOR-03 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h1_030010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 03:00:00'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 03:00:00'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_031201:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 03:10:45'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 03:10:45'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_031205:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: {between: ['H1 03:12:01', 'H1 03:12:03']}}, count: 0, note: 'glitch door2 03:12:01 -> 03:12:03 (2 detik <= 3): tidak ada DOOR2OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H1 02:10:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_031500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H1 03:12:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H1 03:12:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_033500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H1 03:30:10'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H1 03:30:10'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_034120:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H1 03:41:15'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H1 03:41:15'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_035700:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: DOOR-02}, timeout: '00:01:00', note: door-2 normal -> DOOR-02; status device health door di akhir pesan (null = normal)}
+      cek_h1_040530:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H1 04:05:25'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H1 04:05:25'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-2 DOOR-02 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h1_042500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 04:21:30'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 04:21:30'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_043000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: {between: ['H1 04:27:04', 'H1 04:27:06']}}, count: 0, note: 'glitch door1 04:27:04 -> 04:27:06 (2 detik <= 3): tidak ada DOOR1CLOSE'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 04:21:30'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_044000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 35, alert_trigger: 4, created_on: 'H1 04:40:00'}, count: 1, match: {alert_data: 15}, note: 'DOOR_OPEN_TOO_LONG (35) door1, alert_data = alert_min_time 15 menit'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 04:21:30'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_045000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 04:47:30'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 04:47:30'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_050520:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 05:05:15'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 05:05:15'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_052020:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 35, alert_trigger: 4, created_on: 'H1 05:20:20'}, count: 1, match: {alert_data: 15}, note: 'DOOR_OPEN_TOO_LONG (35) door1, alert_data = alert_min_time 15 menit'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 05:05:15'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_052110:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: DOOR-02, door_2_error_status: null}, timeout: '00:01:00', note: door-1 normal -> DOOR-02; status device health door di akhir pesan (null = normal)}
+      cek_h1_052510:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 05:25:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:25:05'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-1 DOOR-02 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h1_054500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H1 05:41:14'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H1 05:41:14'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h1_055500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H1 05:52:40'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_080530:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 08:05:21', 'H2 08:05:23']}}, count: 0, note: 'glitch door1 08:05:21 -> 08:05:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_080600:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 08:05:51', 'H2 08:05:53']}}, count: 0, note: 'glitch door1 08:05:51 -> 08:05:53 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_080630:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 08:06:21', 'H2 08:06:23']}}, count: 0, note: 'glitch door1 08:06:21 -> 08:06:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_080700:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 08:06:51', 'H2 08:06:53']}}, count: 0, note: 'glitch door1 08:06:51 -> 08:06:53 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081010:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 08:10:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 08:10:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081020:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 08:10:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 08:10:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: DOOR-03}, timeout: '00:01:00', note: door-2 normal -> DOOR-03; status device health door di akhir pesan (null = normal)}
+      cek_h2_081040:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 08:10:35'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 08:10:35'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081050:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 08:10:45'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 08:10:45'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081110:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 08:11:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 08:11:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081120:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 08:11:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 08:11:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081140:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 08:11:35'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 08:11:35'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_081150:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 08:11:45'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 08:11:45'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_082640:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-2 DOOR-03 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h2_140121:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 14:00:21', 'H2 14:00:23']}}, count: 0, note: 'glitch door1 14:00:21 -> 14:00:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_140221:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 14:01:21', 'H2 14:01:23']}}, count: 0, note: 'glitch door1 14:01:21 -> 14:01:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_140321:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 14:02:21', 'H2 14:02:23']}}, count: 0, note: 'glitch door1 14:02:21 -> 14:02:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_140500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H2 14:03:21', 'H2 14:03:23']}}, count: 0, note: 'glitch door1 14:03:21 -> 14:03:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_150500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 15:00:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 15:00:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_151000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 15:05:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 15:05:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_151500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 15:10:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 15:10:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_152000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 15:15:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 15:15:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_152500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 15:20:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 15:20:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_153000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 15:25:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 15:25:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_153500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H2 15:30:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H2 15:30:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h2_154000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H2 15:35:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H2 15:35:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_080310:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H3 08:03:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H3 08:03:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_080320:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H3 08:03:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H3 08:03:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: DOOR-03}, timeout: '00:01:00', note: door-2 normal -> DOOR-03; status device health door di akhir pesan (null = normal)}
+      cek_h3_080430:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H3 08:04:21', 'H3 08:04:23']}}, count: 0, note: 'glitch door1 08:04:21 -> 08:04:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_080810:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H3 08:08:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H3 08:08:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_080820:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H3 08:08:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H3 08:08:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_080930:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H3 08:09:21', 'H3 08:09:23']}}, count: 0, note: 'glitch door1 08:09:21 -> 08:09:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_081310:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H3 08:13:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H3 08:13:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_081320:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H3 08:13:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H3 08:13:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_081430:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H3 08:14:21', 'H3 08:14:23']}}, count: 0, note: 'glitch door1 08:14:21 -> 08:14:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_081850:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-2 DOOR-03 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h3_082310:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H3 08:23:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H3 08:23:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_082320:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H3 08:23:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H3 08:23:15'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: DOOR-03}, timeout: '00:01:00', note: door-2 normal -> DOOR-03; status device health door di akhir pesan (null = normal)}
+      cek_h3_082430:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: {between: ['H3 08:24:21', 'H3 08:24:23']}}, count: 0, note: 'glitch door1 08:24:21 -> 08:24:23 (2 detik <= 3): tidak ada DOOR1OPEN'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H1 05:52:40'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h3_083840:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-2 DOOR-03 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h5_000000:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: DOOR-04, door_2_error_status: null}, timeout: '00:01:00', note: door-1 normal -> DOOR-04; status device health door di akhir pesan (null = normal)}
+      cek_h5_083500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4, created_on: 'H5 08:30:15'}, count: 1, match: {alert_data: 0}, note: 'DOOR1OPEN (4), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 0, last_door1_alert: 'H5 08:30:15'}, note: 'door1 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-1 DOOR-04 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h5_084500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19, created_on: 'H5 08:40:15'}, count: 1, match: {alert_data: 1}, note: 'DOOR1CLOSE (19), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door1_status: 1, last_door1_alert: 'H5 08:40:15'}, note: 'door1 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      cek_h6_000000:
+        db:
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: DOOR-04}, timeout: '00:01:00', note: door-2 normal -> DOOR-04; status device health door di akhir pesan (null = normal)}
+      cek_h6_083500:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5, created_on: 'H6 08:30:05'}, count: 1, match: {alert_data: 0}, note: 'DOOR2OPEN (5), alert_data 0 (open)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 0, last_door2_alert: 'H6 08:30:05'}, note: 'door2 open (0 = open, 1 = closed), last alert = waktu perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: door-2 DOOR-04 -> normal; status device health door di akhir pesan (null = normal)}
+      cek_h6_084000:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20, created_on: 'H6 08:35:05'}, count: 1, match: {alert_data: 1}, note: 'DOOR2CLOSE (20), alert_data 1 (closed)'}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {door2_status: 1, last_door2_alert: 'H6 08:35:05'}, note: 'door2 closed (0 = open, 1 = closed), last alert = waktu perubahan'}
+      end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {last_packet: $step_at}, timeout: '00:10:00', note: tunggu kernel selesai memproses data terakhir}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 4}, count: 8, note: jumlah DOOR1OPEN sejak awal timeline}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 19}, count: 9, note: jumlah DOOR1CLOSE sejak awal timeline}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 5}, count: 17, note: jumlah DOOR2OPEN sejak awal timeline}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 20}, count: 18, note: jumlah DOOR2CLOSE sejak awal timeline}
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 35}, count: 3, note: jumlah DOOR_OPEN_TOO_LONG sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id}, count: 11, note: jumlah semua summary device health sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-03, description: door-1, start_time: 'H1 01:30:12', end_time: 'H1 02:21:50'}, count: 1, note: 'dibuat H1 02:34:10, jarak 10.0 km, 2 perubahan saat jalan'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-01, description: door-1, start_time: 'H1 02:39:50', end_time: 'H1 03:00:00'}, count: 1, note: 'dibuat H1 03:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-01, description: door-2, start_time: 'H1 02:39:50', end_time: 'H1 03:00:00'}, count: 1, note: 'dibuat H1 03:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 02:39:50', end_time: 'H1 03:00:00'}, count: 1, match: {description: {approx: 3745.82, tolerance: 1}}, note: 'dibuat H1 03:00:00, jarak m'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-02, description: door-2, start_time: 'H1 03:41:15', end_time: 'H1 04:05:25'}, count: 1, note: 'dibuat H1 04:05:25, jarak terbuka 15.8 km'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-02, description: door-1, start_time: 'H1 05:05:15', end_time: 'H1 05:25:05'}, count: 1, note: 'dibuat H1 05:25:05, jarak terbuka 12.5 km'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-03, description: door-2, start_time: 'H2 08:10:05', end_time: 'H2 08:11:45'}, count: 1, note: 'dibuat H2 08:26:40, jarak 10.0 km, 8 perubahan saat jalan'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-03, description: door-2, start_time: 'H3 08:03:05', end_time: 'H3 08:13:15'}, count: 1, note: 'dibuat H3 08:18:50, jarak 10.1 km, 6 perubahan saat jalan'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-03, description: door-2, start_time: 'H3 08:23:05', end_time: 'H3 08:23:15'}, count: 1, note: 'dibuat H3 08:38:40, jarak 10.0 km, 2 perubahan saat jalan'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-04, description: door-1, start_time: 'H1 05:52:40', end_time: 'H5 08:30:15'}, count: 1, note: 'dibuat H5 08:35:00, 3 hari jalan > 10 km tanpa perubahan'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DOOR-04, description: door-2, start_time: 'H3 08:23:15', end_time: 'H6 08:30:05'}, count: 1, note: 'dibuat H6 08:35:00, 3 hari jalan > 10 km tanpa perubahan'}
+        - {table: device_health, where: {imei: $imei}, match: {door_1_error_status: null, door_2_error_status: null}, timeout: '00:01:00', note: status device health door di akhir pesan (null = normal)}

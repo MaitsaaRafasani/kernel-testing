@@ -1,0 +1,137 @@
+# Daftar field input (ikut normalisasi kernel v2: entity/packet.py, enums/sensor_enum.py).
+# Katalog field + tipe untuk validasi (e2e check). Nilai default ada di env.yaml.
+
+aliases:
+  lat: latitude
+  lng: longitude
+  acc: engine_on
+  satellites: gps_satellites
+
+packets:
+  login: {}
+
+  location:                    # LocationPacket / LocationPacketDetail
+    latitude:        { type: float }
+    longitude:       { type: float }
+    altitude:        { type: float }
+    speed:           { type: int }
+    direction:       { type: int }
+    engine_on:       { type: bool }
+    position_status: { type: bool }
+    gps_satellites:  { type: int }
+    gsm_status:      { type: int, min: 0, max: 4 }
+    hdop:            { type: float }
+    pdop:            { type: float }
+    vdop:            { type: float }
+    accuracy:        { type: int }
+    mileage:         { type: float }
+    is_driving:      { type: bool }
+    vcc_voltage:     { type: float }
+
+  sensor:                      # SensorPacket, nama = SensorCodes huruf kecil
+    extra:                     # field tambahan opsional per sensor
+      mac_address: { type: str }
+      pin_number:  { type: int }
+      ble_battery: { type: float }
+    codes:
+      door1: { type: enum, values: [open, closed] }
+      door2: { type: enum, values: [open, closed] }
+      door3: { type: enum, values: [open, closed] }
+      door4: { type: enum, values: [open, closed] }
+      fuel: { type: float }
+      fuel_analog: { type: float }
+      fuel_digital: { type: float }
+      temperature_1: { type: float }
+      temperature_2: { type: float }
+      temperature_3: { type: float }
+      humidity_1: { type: float }
+      engine: { type: bool }
+      pto_active: { type: bool }
+      refrige_active: { type: bool }
+      odometer: { type: float }
+      hourmeter: { type: float }
+      rfid: { type: str }
+      sos: { type: bool }
+      vibration: { type: bool }
+      battery: { type: float }
+      # TODO: lengkapi sesuai konsep (grup fuel, perilaku, lock, device)
+
+  alarm:                       # AlarmPacket
+    alarm:       { type: str, required: true }   # AlertCodes huruf kecil
+    value:       { type: str }
+    flag:        { type: bool }
+    trigger:     { type: float }
+    driver_id:   { type: int }
+    x_axis:      { type: int }
+    y_axis:      { type: int }
+    z_axis:      { type: int }
+    mac_address: { type: str }
+
+  heartbeat:                   # HeartBeatPacket
+    battery:         { type: int }
+    battery_voltage: { type: float }
+    charger_voltage: { type: float }
+    battery_current: { type: float }
+    signal_strength: { type: int, min: 0, max: 4 }
+    signal_type:     { type: str }
+    ble_battery_1:   { type: float }
+    ble_battery_2:   { type: float }
+    ble_battery_3:   { type: float }
+    ble_battery_4:   { type: float }
+    engine_on:       { type: bool }
+    # concox: paket 0x13/0x23/0x36 (battery = level 0-6). teltonika: tidak ada paket heartbeat (ikut AVL)
+
+  command_reply:               # OnlineCommandReplyPacket -> device_log.message
+    reply_text: { type: str, required: true }   # teks balasan. concox 0x15/0x21, teltonika codec 12 response
+
+# Opsi step (bukan field device)
+step_options:
+  step_name: { type: str }    # nama step untuk expected
+  packet:    { type: str, required: true }   # jenis paket: login, location, heartbeat, ...
+  at:        { type: time }
+  after:     { type: duration }  # jeda dari step sebelumnya (ganti interval), mis. 10m
+  wait:      { type: duration }
+  duplicate: { type: bool }
+  corrupt:   { type: enum, values: [crc, length] }
+  families:  { type: list }    # step hanya dikirim untuk family ini, mis. [concox]
+
+# Opsi khusus per family (lihat docstring creator masing-masing)
+family_options:
+  teltonika:
+    io:       { type: map }      # {io_name: value}, nama dari creators/teltonika/io_table.py
+    io_raw:   { type: list }     # [{id, size: 1|2|4|8|x, value}] untuk IO di luar io_table
+    codec:    { type: enum, values: ["8", "8e"] }
+    priority: { type: int }
+    event_io: { type: str }
+  concox:
+    protocol:      { type: str }   # location 22|12|a0, heartbeat 13|23|36, alarm 26|16|27|a4|19|a5
+    lbs:           { type: map }   # {mcc, mnc, lac, cell_id}, default Indonesia/Telkomsel
+    ble:           { type: map }   # {mac_address, door, temperature, battery} -> paket 0xf1
+    terminal_info: { type: int }   # override byte terminal info
+    acc_in_course: { type: bool }  # acc di bit course (default hanya 0x12)
+    language:      { type: str }   # raw hex
+    upload_mode:   { type: int }
+    reupload:      { type: int }
+    fence_id:      { type: int }   # 0xa4
+    modules:       { type: map }   # 0x36 extension module {id_hex: value_hex}
+    device_tz:     { type: int }   # untuk protocol waktu lokal (12, 16)
+    analog_input_1: { type: int }  # mV -> 0x94 type 00 (0.01 V), kernel pin ANALOG_1
+    serial:        { type: int }
+  topflytech:
+    ble:           { type: map }   # {sensor: temperature|door, mac_address, temperature, humidity, door, battery, voltage} -> 0x12
+    battery_voltage: { type: float }  # V, juga solar_voltage, solar_charging, device_temperature, mileage (km)
+    serial:        { type: int }
+  ruptela:
+    io:            { type: map }   # {io_name: value}, nama di creators/ruptela/creator.py IO
+    io_raw:        { type: list }  # [{id, size: 1|2|4|8, value}]
+    priority:      { type: int }   # 0 = kernel buat location / sensor
+    event_id:      { type: int }
+    hdop:          { type: float }
+  queclink:
+    vcc_voltage:   { type: int }   # mV, external power (maks 32767)
+    analog_input_1: { type: int }  # mV, juga analog_input_2 / 3
+    digital_output_1: { type: bool }  # juga digital_input_1..4, digital_output_2..4
+    motion_status: { type: int }   # raw, default dari engine_on + speed
+    jamming_net:   { type: int }   # alarm gsm_jamming_start
+    buffered:      { type: bool }  # header +BSP / +BVT (otomatis untuk batch)
+    count:         { type: int }

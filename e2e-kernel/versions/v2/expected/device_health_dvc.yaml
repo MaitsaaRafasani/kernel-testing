@@ -1,0 +1,46 @@
+# Expected v2 usecase device_health_dvc (sheet expected_v2).
+# Edit lewat Excel: python cli.py yaml2excel --usecase device_health_dvc -> edit cases/excel/device_health_dvc.xlsx
+#                   -> python cli.py excel2yaml --usecase device_health_dvc -> hapus xlsx (tidak masuk git)
+
+device_health_dvc:
+  default:
+    steps:
+      end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {last_packet: $step_at}, timeout: '00:10:00', note: tunggu kernel selesai memproses data terakhir}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id}, count: 35, note: jumlah semua summary device health sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 00:29:50', 'H1 00:30:10']}, end_time: {between: ['H1 00:30:30', 'H1 00:30:50']}}, count: 1, note: 'dibuat H1 00:30:40'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 00:59:50', 'H1 01:00:10']}, end_time: {between: ['H1 01:05:00', 'H1 01:05:20']}}, count: 1, note: 'dibuat H1 01:05:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 01:59:50', 'H1 02:00:10']}, end_time: {between: ['H1 02:29:51', 'H1 02:30:11']}}, count: 1, note: 'dibuat H1 02:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-02, start_time: {between: ['H1 01:59:50', 'H1 02:00:10']}, end_time: {between: ['H1 02:29:51', 'H1 02:30:11']}}, count: 1, note: 'dibuat H1 02:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 02:59:50', 'H1 03:00:10']}, end_time: {between: ['H1 03:30:00', 'H1 03:30:20']}}, count: 1, note: 'dibuat H1 03:30:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-01, start_time: {between: ['H1 02:59:50', 'H1 03:00:10']}, end_time: {between: ['H1 03:30:00', 'H1 03:30:20']}}, count: 1, note: 'dibuat H1 03:30:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 03:59:50', 'H1 04:00:10']}, end_time: {between: ['H1 04:29:51', 'H1 04:30:11']}}, count: 1, note: 'dibuat H1 04:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-01, start_time: {between: ['H1 03:59:50', 'H1 04:00:10']}, end_time: {between: ['H1 04:29:51', 'H1 04:30:11']}}, count: 1, note: 'dibuat H1 04:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 04:59:50', 'H1 05:00:10']}, end_time: {between: ['H1 05:30:00', 'H1 05:30:20']}}, count: 1, note: 'dibuat H1 05:30:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-01, start_time: {between: ['H1 04:59:50', 'H1 05:00:10']}, end_time: {between: ['H1 05:30:00', 'H1 05:30:20']}}, count: 1, note: 'dibuat H1 05:46:20'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 05:59:50', 'H1 06:00:10']}, end_time: {between: ['H1 06:30:00', 'H1 06:30:20']}}, count: 1, note: 'dibuat H1 06:30:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-01, start_time: {between: ['H1 05:59:50', 'H1 06:00:10']}, end_time: {between: ['H1 06:30:00', 'H1 06:30:20']}}, count: 1, note: 'dibuat H1 06:32:30, dibuat oleh job disconnected'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 06:32:20', 'H1 06:32:40']}, end_time: {between: ['H1 06:37:30', 'H1 06:37:50']}}, count: 1, note: 'dibuat H1 06:37:40'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 06:59:50', 'H1 07:00:10']}, end_time: {between: ['H1 07:09:51', 'H1 07:10:11']}}, count: 1, note: 'dibuat H1 07:10:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 08:59:50', 'H1 09:00:10']}, end_time: {between: ['H1 09:29:51', 'H1 09:30:11']}}, count: 1, note: 'dibuat H1 09:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-02, start_time: {between: ['H1 08:59:50', 'H1 09:00:10']}, end_time: {between: ['H1 09:29:51', 'H1 09:30:11']}}, count: 1, note: 'dibuat H1 09:30:01'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H1 09:59:50', 'H1 10:00:10']}, end_time: {between: ['H1 10:34:50', 'H1 10:35:10']}}, count: 1, note: 'dibuat H1 10:35:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-01, start_time: {between: ['H1 09:59:50', 'H1 10:00:10']}, end_time: {between: ['H1 10:34:50', 'H1 10:35:10']}}, count: 1, note: 'dibuat H1 10:35:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 19:59:50', 'H2 20:00:10']}, end_time: {between: ['H2 20:02:00', 'H2 20:02:20']}}, count: 1, note: 'dibuat H2 20:02:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:09:50', 'H2 20:10:10']}, end_time: {between: ['H2 20:12:00', 'H2 20:12:20']}}, count: 1, note: 'dibuat H2 20:12:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:19:50', 'H2 20:20:10']}, end_time: {between: ['H2 20:22:00', 'H2 20:22:20']}}, count: 1, note: 'dibuat H2 20:22:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:29:50', 'H2 20:30:10']}, end_time: {between: ['H2 20:32:00', 'H2 20:32:20']}}, count: 1, note: 'dibuat H2 20:32:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:39:50', 'H2 20:40:10']}, end_time: {between: ['H2 20:42:00', 'H2 20:42:20']}}, count: 1, note: 'dibuat H2 20:42:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:49:50', 'H2 20:50:10']}, end_time: {between: ['H2 20:52:00', 'H2 20:52:20']}}, count: 1, note: 'dibuat H2 20:52:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 20:59:50', 'H2 21:00:10']}, end_time: {between: ['H2 21:02:00', 'H2 21:02:20']}}, count: 1, note: 'dibuat H2 21:02:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:09:50', 'H2 21:10:10']}, end_time: {between: ['H2 21:12:00', 'H2 21:12:20']}}, count: 1, note: 'dibuat H2 21:12:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:19:50', 'H2 21:20:10']}, end_time: {between: ['H2 21:22:00', 'H2 21:22:20']}}, count: 1, note: 'dibuat H2 21:22:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:29:50', 'H2 21:30:10']}, end_time: {between: ['H2 21:32:00', 'H2 21:32:20']}}, count: 1, note: 'dibuat H2 21:32:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:39:50', 'H2 21:40:10']}, end_time: {between: ['H2 21:42:00', 'H2 21:42:20']}}, count: 1, note: 'dibuat H2 21:42:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:49:50', 'H2 21:50:10']}, end_time: {between: ['H2 21:52:00', 'H2 21:52:20']}}, count: 1, note: 'dibuat H2 21:52:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 21:59:50', 'H2 22:00:10']}, end_time: {between: ['H2 22:02:00', 'H2 22:02:20']}}, count: 1, note: 'dibuat H2 22:02:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: disconnect, start_time: {between: ['H2 22:09:50', 'H2 22:10:10']}, end_time: {between: ['H2 22:12:00', 'H2 22:12:20']}}, count: 1, note: 'dibuat H2 22:12:10'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: DVC-03, start_time: 'H2 00:00:00', end_time: 'H2 23:59:00'}, count: 1, match: {description: 14}, note: 'dibuat H3 00:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 05:30:10', end_time: 'H1 05:50:00'}, count: 1, note: 'E: 20 menit tanpa lokasi setelah tersambung (summary tambahan offline)'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 05:59:50', end_time: 'H1 06:37:40'}, count: 1, note: 'F: putus lagi sebelum ada lokasi (summary tambahan offline)'}

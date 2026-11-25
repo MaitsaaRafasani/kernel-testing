@@ -1,0 +1,33 @@
+# Expected v2 usecase device_health_pto_analog (sheet expected_v2).
+# Edit lewat Excel: python cli.py yaml2excel --usecase device_health_pto_analog -> edit cases/excel/device_health_pto_analog.xlsx
+#                   -> python cli.py excel2yaml --usecase device_health_pto_analog -> hapus xlsx (tidak masuk git)
+
+device_health_pto_analog:
+  default:
+    steps:
+      end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {last_packet: $step_at}, timeout: '00:10:00', note: tunggu kernel selesai memproses data terakhir}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id}, count: 22, note: jumlah semua summary device health sejak awal timeline}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 00:59:50', end_time: 'H1 01:30:00'}, count: 1, note: 'dibuat H1 01:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 02:10:00', end_time: 'H1 02:22:00'}, count: 1, note: 'dibuat H1 02:22:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 02:22:00', end_time: 'H1 02:34:00'}, count: 1, note: 'dibuat H1 02:34:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 02:34:00', end_time: 'H1 02:46:00'}, count: 1, note: 'dibuat H1 02:46:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 02:46:00', end_time: 'H1 02:58:00'}, count: 1, note: 'dibuat H1 02:58:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 02:58:00', end_time: 'H1 03:10:00'}, count: 1, note: 'dibuat H1 03:10:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 03:19:50', end_time: 'H1 03:50:00'}, count: 1, note: 'dibuat H1 03:50:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H1 05:00:00', end_time: 'H1 06:30:00'}, count: 1, note: 'dibuat H1 06:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H1 11:15:00', end_time: 'H1 12:29:50'}, count: 1, note: 'dibuat H1 12:40:50'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 12:29:50', end_time: 'H1 13:00:00'}, count: 1, note: 'dibuat H1 13:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H1 11:15:00', end_time: 'H1 13:20:00'}, count: 1, note: 'dibuat H1 13:20:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H1 16:19:50', end_time: 'H1 17:30:00'}, count: 1, note: 'dibuat H1 17:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H1 16:00:00', end_time: 'H1 18:00:00'}, count: 1, note: 'dibuat H1 18:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H1 20:00:00', end_time: 'H2 06:10:00'}, count: 1, note: 'dibuat H2 06:10:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H2 08:25:00', end_time: 'H2 09:10:00'}, count: 1, note: 'dibuat H2 09:10:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H2 11:40:00', end_time: 'H2 12:40:30'}, count: 1, note: 'dibuat H2 12:40:30'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H2 15:59:50', end_time: 'H2 16:20:00'}, count: 1, note: 'dibuat H2 16:20:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H2 15:30:00', end_time: 'H2 17:00:00'}, count: 1, note: 'dibuat H2 17:00:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-01, start_time: 'H2 18:19:50', end_time: 'H2 19:30:00'}, count: 1, note: 'dibuat H2 19:30:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: PTO-02, start_time: 'H2 20:30:00', end_time: 'H2 21:40:00'}, count: 1, note: 'dibuat H2 21:40:00'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 03:19:50', end_time: 'H1 03:50:00'}, count: 1, note: 'D: device offline (summary tambahan offline)'}
+        - {table: summary_device_error, where: {vehicle_id: $vehicle_id, error_type: GPS-01, start_time: 'H1 16:19:50', end_time: 'H1 17:30:00'}, count: 1, note: 'J: device offline (summary tambahan offline)'}

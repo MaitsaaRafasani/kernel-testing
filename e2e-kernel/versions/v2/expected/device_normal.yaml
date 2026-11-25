@@ -1,0 +1,38 @@
+# Expected v2 usecase device_normal (sheet expected_v2).
+# Dibuat oleh generators/device_normal.py: ubah generatornya lalu python cli.py generate --usecase device_normal
+# (bukan edit YAML / Excel, generate ulang menimpa file ini)
+
+device_normal:
+  default:
+    steps:
+      connected:
+        db:
+        - {table: device, where: {imei: $imei}, match: {ip: $ip_gate, port: $port_gate}, note: connect -> update_ip_port_gate_in_device}
+      location:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {latitude: {approx: -6.193096}, longitude: {approx: 106.822934}, last_packet: $step_at}, note: lokasi pertama -> vehicle_status (flush consumer_vehicle_status)}
+      heartbeat:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {battery: 85, signal_strength: 4}, note: concox heartbeat 0x13 level 5 -> 85 persen}
+      command_reply:
+        db:
+        - {table: device_log, where: {vehicle_id: $vehicle_id, imei: $imei}, match: {message: $reply_text, type: R}, note: online command reply -> device_log type R}
+      overspeed_end:
+        db:
+        - {table: raw_alert, where: {vehicle_id: $vehicle_id, alert_code: 8, created_on: 'H1 00:31:00'}, match: {alert_flag: true}, note: 'overspeed lokasi 120 km/jam > 60 detik -> raw_alert (OVERSPEEDS = 8), waktu awal + 60 detik'}
+      trip_park_end:
+        db:
+        - {table: summary_trip, where: {vehicle_id: $vehicle_id, start_time: $at.trip_start}, count: 1, match: {type: M, stop_time: $at.trip_end, trip_mileage: {approx: 63949, tolerance: 300}, max_speed: 120, stop_lat: {approx: -6.321987}, stop_long: {approx: 107.279001}}, note: 'trip normal: Jakarta (Jl. Thamrin) -> Karawang Barat'}
+      assisted_park_end:
+        db:
+        - {table: summary_trip, where: {vehicle_id: $vehicle_id, start_time: $at.assisted_start}, count: 1, match: {type: A, stop_time: $at.tow_end, trip_mileage: {approx: 44536, tolerance: 300}, max_speed: 30, stop_lat: {approx: -6.556502}, stop_long: {approx: 107.443338}}, note: 'trip assisted (derek, acc off): Karawang Barat -> Purwakarta, mulai >= 300 m dari titik parkir'}
+      buffer_end:
+        db:
+        - {table: raw_location, where: {vehicle_id: $vehicle_id, sent_on: {between: [$at.buffer_start, $at.buffer_end]}}, count: 120, note: 120 record buffer tersimpan dengan waktu aslinya}
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {latitude: {approx: -6.273409}, longitude: {approx: 107.046018}, last_packet: $step_at}, note: posisi record buffer terakhir}
+      drive_end:
+        db:
+        - {table: vehicle_status, where: {vehicle_id: $vehicle_id}, match: {latitude: {approx: -6.259911}, longitude: {approx: 107.000123}, last_packet: $step_at}, note: realtime lanjut setelah buffer}
+      buffer_park_end:
+        db:
+        - {table: summary_trip, where: {vehicle_id: $vehicle_id, start_time: $at.buffer_trip_start}, count: 1, match: {type: M, stop_time: $at.drive_end, trip_mileage: {approx: 71365, tolerance: 300}, max_speed: 60, stop_lat: {approx: -6.259911}, stop_long: {approx: 107.000123}}, note: '1 trip utuh realtime + buffer + realtime: Purwakarta -> Bekasi'}

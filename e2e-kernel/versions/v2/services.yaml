@@ -1,0 +1,7 @@
+# Consumer kernel v2 yang wajib aktif per usecase (dicek saat preflight).
+# Nama = service worker kernel (cli). TODO: verifikasi nama durable consumer.
+
+default: [raw_data_parser, parser]
+
+usecases:
+  device_normal: [vehicle_status]   # vehicle_status di-flush dari redis ke DB oleh cli/consumer_vehicle_status.py

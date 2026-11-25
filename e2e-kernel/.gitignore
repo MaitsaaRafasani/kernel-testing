@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+.pytest_cache/
+
+reports/*
+!reports/.gitkeep
+
+# Excel hanya untuk edit sementara, sumber test case = YAML
+cases/excel/

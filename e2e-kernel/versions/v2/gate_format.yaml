@@ -1,0 +1,66 @@
+# Format pesan gate untuk kernel v2. Kalau format gate berubah, cukup edit file ini.
+# Sumber (iot-gateway):
+# - subject/stream: src/services/forwarders/natsClient.ts  -> `${tube}.${identifier}`
+#   tanpa imei -> identifier COMMAND, tube `${tube}_COMMAND`, stream `${stream}-command`
+# - data:        socketModule/forwarder/formattedForwarder (FormatData cckernel v2)
+# - connect:     socketModule/processor/deviceProcessor #setStatus
+# - disconnect:  socketModule/receiver/socketReceiver handleClose
+# - xmit:        socketModule/processor/externalCmdProcessor #processExternalCommand
+#
+# Template: "$var" utuh -> nilai asli (tipe dipertahankan), "${a}.${b}" -> string.
+# {json: {...}} -> object di-serialize jadi string JSON (seperti JSON.stringify di gate).
+# Partisi PACKET.<imei> -> PACKET.<channel>.<imei> dilakukan transform stream NATS.
+
+transport: nats
+
+messages:
+  # 1. data device (send: login / location / sensor / heartbeat / alarm)
+  data:
+    stream: "${stream}"
+    subject: "${tube}.${imei}"
+    body:
+      data: $payload                # raw hex dari Family Creator
+      model: $model                 # DeviceModelEnum, mis. fmb130, gt06n
+      family: $family               # FamilyNameEnum, mis. teltonika, concox
+      identifier: $imei
+      received_on: $received_on     # waktu kirim sebenarnya, ISO UTC ms, mis. 2026-11-18T03:00:00.123Z
+
+  # 2a. connection status - device connect ke gate (send: connect)
+  connect:
+    stream: "${stream}"
+    subject: "${tube}.${imei}"
+    body:
+      message_type: connection_status
+      identifier: $imei
+      message:
+        json:
+          status: connected
+          ip_gate: $ip_gate
+          port_gate: $port_gate     # number
+          gate_start_time: $gate_start_time
+      time: $time
+
+  # 2b. connection status - device disconnect dari gate (send: disconnect)
+  disconnect:
+    stream: "${stream}"
+    subject: "${tube}.${imei}"
+    body:
+      message_type: connection_status
+      identifier: $imei
+      message:
+        json:
+          status: disconnected
+          last_connect: $last_connect
+      time: $time
+
+  # 3. xmit - external command (send: xmit), tanpa imei
+  xmit:
+    stream: "${stream}-command"
+    subject: "${tube}_COMMAND.COMMAND"
+    body:
+      command: $command             # 7000,EC,<hex(symbol,data,action,vehicle_id,binary_xmit,target,config_info)>
+      ip: $ip
+      port: $port                   # number
+
+# override per family untuk pesan data, mis. { mobile_apps: { tube: PACKET_MOBILE, stream: iot-gateway-mobile } }
+by_family: {}
